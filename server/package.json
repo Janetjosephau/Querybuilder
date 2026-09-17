@@ -1,0 +1,19 @@
+{
+  "name": "guidewire-query-studio-server",
+  "version": "1.0.0",
+  "description": "Backend API for Guidewire Insurance AI Query Studio with Ollama & NPI Protection",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node tests/test_safety.js"
+  },
+  "dependencies": {
+    "alasql": "^4.19.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.12.0",
+    "sql-parser-cst": "^0.29.1"
+  }
+}

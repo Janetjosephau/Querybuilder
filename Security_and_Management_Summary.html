@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guidewire AI Query Studio - Executive Security Brief</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1e293b;
+      background-color: #f8fafc;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 48px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .header {
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      font-size: 13px;
+      color: #64748b;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .meta strong {
+      color: #334155;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    .highlight-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .highlight-icon {
+      font-size: 28px;
+    }
+
+    .highlight-text h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 4px;
+    }
+
+    .highlight-text p {
+      font-size: 13px;
+      color: #1e3a8a;
+      margin: 0;
+    }
+
+    .security-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .security-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .security-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .security-card p {
+      font-size: 12px;
+      color: #475569;
+      margin: 0;
+    }
+
+    .code-tag {
+      font-family: monospace;
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #0f172a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .print-btn:hover {
+      background: #1d4ed8;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .page {
+        border: none;
+        box-shadow: none;
+        padding: 20px 0;
+        max-width: 100%;
+      }
+      .print-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <div class="header">
+      <span class="badge">Security & Management Sign-Off Brief</span>
+      <h1>Guidewire AI Query Studio</h1>
+      <div class="meta">
+        <div><strong>To:</strong> Engineering Manager & Chief Information Security Officer (CISO)</div>
+        <div><strong>Domain:</strong> Guidewire PolicyCenter, BillingCenter, ClaimCenter</div>
+        <div><strong>Date:</strong> September 2026</div>
+      </div>
+    </div>
+
+    <h2>1. Executive Summary</h2>
+    <p>
+      This project creates an internal, natural-language query assistant for insurance business users across <strong>Residential</strong> and <strong>Commercial</strong> product lines. Team members can ask everyday questions (e.g. <em>"What is our loss ratio for Residential vs Commercial?"</em> or <em>"Show top 10 open Commercial claims with reserves over $50,000"</em>) and get instant PostgreSQL queries and charts without waiting on database administrator tickets.
+    </p>
+
+    <div class="highlight-box">
+      <div class="highlight-icon">🔒</div>
+      <div class="highlight-text">
+        <h3>100% Local & Air-Gapped (Zero Cloud Data Egress)</h3>
+        <p>Uses local <strong>Ollama (127.0.0.1)</strong>. Absolutely no prompts, database schemas, or company records are ever sent to OpenAI, Google, Anthropic, or any third-party cloud.</p>
+      </div>
+    </div>
+
+    <h2>2. Key Security & Privacy Safeguards</h2>
+    <div class="security-grid">
+      <div class="security-card">
+        <h4>1. Zero Policyholder Data to AI</h4>
+        <p>The AI only receives structural table and column names (e.g. <span class="code-tag">policynumber</span>, <span class="code-tag">lossdate</span>). Zero customer records are ever fed to the AI model.</p>
+      </div>
+      <div class="security-card">
+        <h4>2. Automatic NPI / PII Masking</h4>
+        <p>Dynamic Data Masking (DDM) automatically redacts sensitive data before display: SSN (<span class="code-tag">***-**-1234</span>), Bank Accounts, Emails, and Phone Numbers.</p>
+      </div>
+      <div class="security-card">
+        <h4>3. Read-Only Protection</h4>
+        <p>Guaranteed read-only. <span class="code-tag">DROP</span>, <span class="code-tag">DELETE</span>, <span class="code-tag">UPDATE</span>, and <span class="code-tag">INSERT</span> are blocked by AST inspection and PostgreSQL <span class="code-tag">READ ONLY</span> transactions.</p>
+      </div>
+      <div class="security-card">
+        <h4>4. Anti-Hallucination Guardrails</h4>
+        <p>AI cannot invent tables. If a question asks for non-existent information, the system safely returns: <em>"Insufficient information to determine."</em></p>
+      </div>
+    </div>
+
+    <h2>3. Zero-Risk Proof of Concept (POC)</h2>
+    <p>
+      For the initial evaluation, the application uses a <strong>100% preloaded synthetic Guidewire demo database</strong> (fake customer names, fake claims, fake invoices). No real policyholder data will be accessed until Management and InfoSec review the working tool and inspect audit logs.
+    </p>
+
+    <h2>4. Sign-Off & Approvals</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Reviewer</th>
+          <th>Name</th>
+          <th>Decision</th>
+          <th>Signature / Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Engineering Manager</strong></td>
+          <td>_______________________</td>
+          <td>[ &nbsp; ] Approved &nbsp;&nbsp; [ &nbsp; ] Needs Revision</td>
+          <td>_______________________</td>
+        </tr>
+        <tr>
+          <td><strong>Security Officer (CISO)</strong></td>
+          <td>_______________________</td>
+          <td>[ &nbsp; ] Approved &nbsp;&nbsp; [ &nbsp; ] Needs Revision</td>
+          <td>_______________________</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Print / Save as PDF
+  </button>
+
+</body>
+</html>
