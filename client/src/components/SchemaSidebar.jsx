@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Database, ChevronDown, ChevronRight, ShieldAlert, Key, Table2, Layers } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Database, ChevronDown, ChevronRight, ShieldAlert, Key, Table2, Search } from 'lucide-react';
 
 export default function SchemaSidebar({ schema, onSelectTable }) {
-  const [openTables, setOpenTables] = useState({ pc_policy: true, cc_claim: true, pc_policyholder: true });
+  const [openTables, setOpenTables] = useState({ bc_account: true, bc_invoice: true, pc_policy: true });
+  const [searchFilter, setSearchFilter] = useState('');
 
   const toggleTable = (tblName) => {
     setOpenTables(prev => ({ ...prev, [tblName]: !prev[tblName] }));
@@ -10,32 +11,65 @@ export default function SchemaSidebar({ schema, onSelectTable }) {
 
   const tables = schema?.tables || [];
 
+  // Filter tables by search query
+  const filteredTables = useMemo(() => {
+    if (!searchFilter.trim()) return tables;
+    const q = searchFilter.toLowerCase().trim();
+    return tables.filter(t => t.name.toLowerCase().includes(q));
+  }, [tables, searchFilter]);
+
   // Categorize tables by suite prefix
-  const pcTables = tables.filter(t => t.name.startsWith('pc_'));
-  const bcTables = tables.filter(t => t.name.startsWith('bc_'));
-  const ccTables = tables.filter(t => t.name.startsWith('cc_'));
-  const otherTables = tables.filter(t => !t.name.startsWith('pc_') && !t.name.startsWith('bc_') && !t.name.startsWith('cc_'));
+  const pcTables = filteredTables.filter(t => t.name.startsWith('pc_'));
+  const bcTables = filteredTables.filter(t => t.name.startsWith('bc_'));
+  const ccTables = filteredTables.filter(t => t.name.startsWith('cc_'));
+  const otherTables = filteredTables.filter(t => !t.name.startsWith('pc_') && !t.name.startsWith('bc_') && !t.name.startsWith('cc_'));
 
-  const suiteGroups = [
-    { title: 'PolicyCenter', prefix: 'pc_*', list: pcTables, color: 'text-sky-400' },
-    { title: 'BillingCenter', prefix: 'bc_*', list: bcTables, color: 'text-indigo-400' },
-    { title: 'ClaimCenter', prefix: 'cc_*', list: ccTables, color: 'text-amber-400' },
-  ];
-
+  const suiteGroups = [];
+  if (bcTables.length > 0) {
+    suiteGroups.push({ title: 'BillingCenter', prefix: 'bc_*', list: bcTables, color: 'text-indigo-400' });
+  }
+  if (pcTables.length > 0) {
+    suiteGroups.push({ title: 'PolicyCenter', prefix: 'pc_*', list: pcTables, color: 'text-sky-400' });
+  }
+  if (ccTables.length > 0) {
+    suiteGroups.push({ title: 'ClaimCenter', prefix: 'cc_*', list: ccTables, color: 'text-amber-400' });
+  }
   if (otherTables.length > 0) {
-    suiteGroups.push({ title: 'Other Tables', prefix: 'public', list: otherTables, color: 'text-emerald-400' });
+    suiteGroups.push({ title: 'Other Tables', prefix: schema?.mode === 'imported' ? 'twia' : 'public', list: otherTables, color: 'text-emerald-400' });
   }
 
   return (
-    <aside className="w-72 bg-slate-900 border-r border-slate-800 p-3.5 space-y-4 overflow-y-auto flex-shrink-0">
+    <aside className="w-80 bg-slate-900 border-r border-slate-800 p-3.5 space-y-3 overflow-y-auto flex-shrink-0 flex flex-col h-full">
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4 text-emerald-400" />
-          <h2 className="font-bold text-xs text-slate-200 tracking-wide uppercase">Schema Catalog</h2>
+          <h2 className="font-bold text-xs text-slate-200 tracking-wide uppercase">
+            {schema?.mode === 'imported' ? 'TWIA BillingCenter' : 'Schema Catalog'}
+          </h2>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-          {tables.length} tables
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+          {filteredTables.length} {searchFilter ? 'matches' : 'tables'}
         </span>
+      </div>
+
+      {/* Quick Table Search */}
+      <div className="relative">
+        <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          placeholder="Filter 1,200+ tables (e.g. account, invoice)..."
+          className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+        />
+        {searchFilter && (
+          <button
+            onClick={() => setSearchFilter('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300 px-1"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div className="space-y-3 text-xs">

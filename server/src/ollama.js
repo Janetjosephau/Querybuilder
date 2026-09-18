@@ -423,7 +423,7 @@ async function generateSql(prompt, schema) {
     return deterministic;
   }
 
-  const systemPrompt = buildAntiHallucinationSystemPrompt(schema);
+  const systemPrompt = buildAntiHallucinationSystemPrompt(schema, prompt);
 
   const requestPayload = {
     model: selectedModel,

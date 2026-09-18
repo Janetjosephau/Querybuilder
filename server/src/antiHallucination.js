@@ -87,12 +87,45 @@ function verifySqlAgainstCatalog(sql, schema) {
 }
 
 /**
+ * Select relevant tables for the prompt when schema has many tables (>35)
+ */
+function selectRelevantTables(tables, prompt = '') {
+  if (!tables || tables.length <= 35) return tables || [];
+
+  const promptWords = prompt.toLowerCase().split(/[^a-z0-9_]+/).filter(w => w.length > 2);
+  const scored = tables.map(t => {
+    let score = 0;
+    const tName = t.name.toLowerCase();
+    
+    if (promptWords.some(w => tName === w || tName.includes(w))) score += 10;
+    
+    // Core Guidewire BillingCenter & PolicyCenter anchor tables
+    if (['bc_account', 'bc_invoice', 'bc_payment', 'bc_accountpaymentplan', 'bc_policyperiod', 'bc_charge', 'bc_producer', 'pc_policy', 'pc_policyholder', 'cc_claim'].includes(tName)) {
+      score += 4;
+    }
+
+    for (const col of t.columns) {
+      const cName = col.name.toLowerCase();
+      if (promptWords.includes(cName)) score += 2;
+    }
+
+    return { table: t, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 30).map(s => s.table);
+}
+
+/**
  * Builds the strict Anti-Hallucination system prompt for local Ollama
  * @param {Object} schema - Clean structural schema (table names, columns, types, foreign keys)
+ * @param {string} prompt - User prompt for schema pruning
  * @returns {string} System prompt
  */
-function buildAntiHallucinationSystemPrompt(schema) {
-  const schemaDescription = schema.tables.map(t => {
+function buildAntiHallucinationSystemPrompt(schema, prompt = '') {
+  const activeTables = selectRelevantTables(schema.tables, prompt);
+
+  const schemaDescription = activeTables.map(t => {
     const cols = t.columns.map(c => `${c.name}${c.isNpi ? ' [NPI]' : ''}`).join(', ');
     return `TABLE ${t.name}(${cols})`;
   }).join('\n');
@@ -102,8 +135,8 @@ CATALOG:
 ${schemaDescription}
 
 STRICT RULES:
-1. Use ONLY the tables and columns in the CATALOG above. Product codes: 'Residential' or 'Commercial'.
-2. Map natural phrasing and minor typos to catalog tables (e.g., 'policy holder', 'pc_policholder', 'policyholder' -> pc_policyholder; 'pc policy' -> pc_policy; 'invoice' -> bc_invoice; 'claims' -> cc_claim).
+1. Use ONLY the tables and columns in the CATALOG above.
+2. Map natural phrasing and minor typos to catalog tables (e.g., 'accounts' -> bc_account; 'invoices' -> bc_invoice; 'payments' -> bc_payment).
 3. ONLY if the user asks for concepts completely outside the database (e.g. credit score, stock price, social media), return JSON: {"sql": null, "insufficientInfo": "Insufficient information to determine: Requested attribute does not exist in Guidewire schema catalog.", "explanation": "Attribute not in schema", "confidence": "low"}
 4. Only output PostgreSQL SELECT queries. Never DROP/UPDATE/DELETE.
 5. Return ONLY valid JSON:

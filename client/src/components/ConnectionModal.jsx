@@ -52,22 +52,33 @@ export default function ConnectionModal({ isOpen, onClose, currentMode, onConnec
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
           {/* Mode Selector Tabs */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800">
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setMode('imported')}
+              className={`py-2 px-2.5 rounded-lg font-medium text-[11px] transition ${
+                mode === 'imported'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              TWIA BC (1,296 Tables)
+            </button>
             <button
               type="button"
               onClick={() => setMode('demo')}
-              className={`py-2 px-3 rounded-lg font-medium transition ${
+              className={`py-2 px-2.5 rounded-lg font-medium text-[11px] transition ${
                 mode === 'demo'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Guidewire Demo DB (POC)
+              Demo DB (11 Tables)
             </button>
             <button
               type="button"
               onClick={() => setMode('postgres')}
-              className={`py-2 px-3 rounded-lg font-medium transition ${
+              className={`py-2 px-2.5 rounded-lg font-medium text-[11px] transition ${
                 mode === 'postgres'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-slate-200'
@@ -77,14 +88,24 @@ export default function ConnectionModal({ isOpen, onClose, currentMode, onConnec
             </button>
           </div>
 
-          {mode === 'demo' ? (
+          {mode === 'imported' ? (
+            <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/60 space-y-2 text-slate-300">
+              <div className="flex items-center gap-2 text-indigo-400 font-semibold">
+                <CheckCircle className="w-4 h-4" />
+                <span>TWIA Guidewire BillingCenter QA02 Schema Ready</span>
+              </div>
+              <p className="text-slate-400 leading-relaxed text-[11px]">
+                Active schema extracted from <span className="font-mono text-indigo-300">dump-twia_gwcppre_qa02_bc-202609181333.sql</span> containing <strong>1,296 tables</strong> (including 511 core <span className="font-mono text-indigo-300">bc_*</span> entities). The AI Assistant can query this exact enterprise structure directly.
+              </p>
+            </div>
+          ) : mode === 'demo' ? (
             <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2 text-slate-300">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold">
                 <CheckCircle className="w-4 h-4" />
                 <span>Preloaded Guidewire Insurance Dataset Ready</span>
               </div>
               <p className="text-slate-400 leading-relaxed text-[11px]">
-                Preloaded with 11 relational tables across <strong>PolicyCenter</strong>, <strong>BillingCenter</strong>, and <strong>ClaimCenter</strong>, including Residential and Commercial policies, open reserves, invoices, and synthetic policyholder records for testing NPI protection.
+                Preloaded with 11 relational tables across <strong>PolicyCenter</strong>, <strong>BillingCenter</strong>, and <strong>ClaimCenter</strong> with synthetic records for testing queries and NPI masking.
               </p>
             </div>
           ) : (

@@ -171,6 +171,11 @@ router.post('/connect', async (req, res) => {
     return res.json({ success: true, mode: 'demo', message: 'Switched to Guidewire Demo Database.' });
   }
 
+  if (mode === 'imported' || mode === 'twia_bc') {
+    const result = db.switchToImported();
+    return res.json({ success: true, mode: 'imported', message: `Switched to TWIA BillingCenter QA02 Imported Schema (${result.tablesCount} tables).` });
+  }
+
   try {
     const result = await db.connectPostgres(config || {});
     res.json(result);

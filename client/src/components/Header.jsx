@@ -53,10 +53,13 @@ export default function Header({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 transition text-slate-300 hover:text-white"
             title="Configure Database Connection"
           >
-            <Database className="w-3.5 h-3.5 text-blue-400" />
+            <Database className={`w-3.5 h-3.5 ${dbMode === 'imported' ? 'text-indigo-400' : dbMode === 'demo' ? 'text-emerald-400' : 'text-blue-400'}`} />
             <span className="text-slate-400">DB:</span>
             <span className="font-medium text-slate-200">
-              {dbMode === 'demo' ? 'Preloaded Demo DB' : 'Live PostgreSQL'}
+              {dbMode === 'imported' ? 'TWIA BC (1,296 Tables)' : dbMode === 'demo' ? 'Demo DB (11 Tables)' : 'Live PostgreSQL'}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-700">
+              {dbMode === 'imported' ? 'Active Schema' : dbMode === 'demo' ? 'In-Memory' : 'Connected'}
             </span>
           </button>
 

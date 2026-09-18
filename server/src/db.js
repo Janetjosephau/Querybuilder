@@ -4,15 +4,29 @@
  * and Live PostgreSQL database connections with schema introspection.
  */
 
+const fs = require('fs');
+const path = require('path');
 const { Pool } = require('pg');
 const alasql = require('alasql');
 const { generateGuidewireData } = require('./guidewireSeed');
 const { applyDataMasking, classifyColumn } = require('./masking');
 const { validateSqlSafety } = require('./safety');
 
-let currentMode = 'demo'; // 'demo' | 'postgres'
+let currentMode = 'imported'; // 'demo' | 'postgres' | 'imported'
 let pgPool = null;
 let liveDbConfig = null;
+
+// Load extracted TWIA BillingCenter schema if present
+const importedSchemaPath = path.join(__dirname, 'importedSchema.json');
+let importedSchema = null;
+if (fs.existsSync(importedSchemaPath)) {
+  try {
+    importedSchema = JSON.parse(fs.readFileSync(importedSchemaPath, 'utf8'));
+    console.log(`[DB] Loaded Imported Schema (${importedSchema.database || 'twia_bc'}) with ${importedSchema.tableCount} tables.`);
+  } catch (err) {
+    console.error('[DB] Error loading importedSchema.json:', err.message);
+  }
+}
 
 // Initialize in-memory Demo Database
 function initDemoDatabase() {
@@ -78,7 +92,7 @@ async function connectPostgres(config) {
 }
 
 /**
- * Switch back to Demo DB
+ * Switch to Demo DB
  */
 function switchToDemo() {
   currentMode = 'demo';
@@ -86,31 +100,61 @@ function switchToDemo() {
 }
 
 /**
+ * Switch to Imported TWIA BillingCenter Schema
+ */
+function switchToImported() {
+  currentMode = 'imported';
+  return { success: true, mode: 'imported', tablesCount: importedSchema?.tableCount || 0 };
+}
+
+/**
  * Introspect database schema
  */
 async function getSchema() {
+  // 1. Imported TWIA BillingCenter Schema
+  if (currentMode === 'imported' && importedSchema) {
+    return {
+      mode: 'imported',
+      database: importedSchema.database || 'twia_gwcppre_qa02_bc',
+      tableCount: importedSchema.tableCount,
+      tables: importedSchema.tables.map(t => ({
+        name: t.name,
+        schema: t.schema || 'public',
+        columns: t.columns.map(c => ({
+          name: c.name,
+          type: c.type,
+          isNpi: classifyColumn(c.name) !== null
+        }))
+      }))
+    };
+  }
+
+  // 2. Live PostgreSQL DB
   if (currentMode === 'postgres' && pgPool) {
     try {
       const query = `
         SELECT 
+          table_schema,
           table_name, 
           column_name, 
           data_type 
         FROM information_schema.columns 
-        WHERE table_schema = 'public'
-        ORDER BY table_name, ordinal_position;
+        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY table_schema, table_name, ordinal_position;
       `;
       const res = await pgPool.query(query);
       const tablesMap = {};
 
       for (const row of res.rows) {
-        if (!tablesMap[row.table_name]) {
-          tablesMap[row.table_name] = {
+        const key = row.table_schema === 'public' ? row.table_name : `${row.table_schema}.${row.table_name}`;
+        if (!tablesMap[key]) {
+          tablesMap[key] = {
             name: row.table_name,
+            schema: row.table_schema,
             columns: []
           };
         }
-        tablesMap[row.table_name].columns.push({
+        tablesMap[key].columns.push({
           name: row.column_name,
           type: row.data_type,
           isNpi: classifyColumn(row.column_name) !== null
@@ -191,6 +235,9 @@ async function executeQuery(rawSql) {
     } finally {
       client.release();
     }
+  } else if (currentMode === 'imported') {
+    // Pure DDL imported schema mode (no live database rows loaded yet)
+    rawRows = [];
   } else {
     // Demo mode with alasql
     try {
@@ -222,5 +269,7 @@ module.exports = {
   executeQuery,
   connectPostgres,
   switchToDemo,
+  switchToImported,
   getMode: () => currentMode
 };
+
