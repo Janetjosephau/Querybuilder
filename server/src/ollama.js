@@ -144,6 +144,64 @@ LIMIT ${limit};`,
     };
   }
 
+  // 0.1 Prefix / String Filter Queries (e.g. "producer start with Texas", "accounts starting with Galveston")
+  const startWithMatch = p.match(/(?:start\s*with|starts\s*with|starting\s*with|named|called|like)\s+['"]?([a-zA-Z0-9_\s]+?)['"]?(?:\s+table|\s*$)/i);
+  if (startWithMatch) {
+    const term = startWithMatch[1].trim();
+    if (term) {
+      if (p.includes('producer') || p.includes('agency') || p.includes('broker')) {
+        return {
+          sql: `SELECT * FROM bc_producer WHERE LOWER(name) LIKE '${term.toLowerCase()}%' OR LOWER(namedenorm) LIKE '${term.toLowerCase()}%' LIMIT ${limit};`,
+          explanation: `Retrieves producers from bc_producer where name starts with '${term}'. Protected columns are dynamically sanitized.`,
+          confidence: 'high',
+          insufficientInfo: null,
+          suggestedChartType: 'table'
+        };
+      }
+
+      if (p.includes('account') || p.includes('bc_account')) {
+        return {
+          sql: `SELECT * FROM bc_account WHERE LOWER(accountname) LIKE '${term.toLowerCase()}%' OR LOWER(accountnumber) LIKE '${term.toLowerCase()}%' LIMIT ${limit};`,
+          explanation: `Retrieves billing accounts from bc_account where account name starts with '${term}'. Protected columns are dynamically sanitized.`,
+          confidence: 'high',
+          insufficientInfo: null,
+          suggestedChartType: 'table'
+        };
+      }
+
+      if (p.includes('contact') || p.includes('bc_contact') || p.includes('person')) {
+        return {
+          sql: `SELECT * FROM bc_contact WHERE LOWER(firstname) LIKE '${term.toLowerCase()}%' OR LOWER(lastname) LIKE '${term.toLowerCase()}%' OR LOWER(name) LIKE '${term.toLowerCase()}%' LIMIT ${limit};`,
+          explanation: `Retrieves billing contacts from bc_contact where name starts with '${term}'. Protected NPI columns are dynamically sanitized.`,
+          confidence: 'high',
+          insufficientInfo: null,
+          suggestedChartType: 'table'
+        };
+      }
+    }
+  }
+
+  // 0.2 Invoice Status filters (e.g. "past due invoices", "paid invoices")
+  if (p.includes('invoice') && (p.includes('past due') || p.includes('pastdue') || p.includes('delinquent'))) {
+    return {
+      sql: `SELECT * FROM bc_invoice WHERE status = 'PastDue' LIMIT ${limit};`,
+      explanation: `Retrieves past-due invoices from bc_invoice.`,
+      confidence: 'high',
+      insufficientInfo: null,
+      suggestedChartType: 'table'
+    };
+  }
+
+  if (p.includes('invoice') && p.includes('paid')) {
+    return {
+      sql: `SELECT * FROM bc_invoice WHERE status = 'Paid' LIMIT ${limit};`,
+      explanation: `Retrieves paid invoices from bc_invoice.`,
+      confidence: 'high',
+      insufficientInfo: null,
+      suggestedChartType: 'table'
+    };
+  }
+
   // Direct Table Queries (e.g. "top 10 from pc_policy", "show cc_claim table", etc.)
   const tableMap = [
     { table: 'bc_account', triggers: ['bc_account', 'bc account', 'billing account', 'account', 'accounts'] },
@@ -163,16 +221,20 @@ LIMIT ${limit};`,
     { table: 'cc_claim', triggers: ['cc_claim', 'cc claim', 'claim'] }
   ];
 
-  for (const item of tableMap) {
-    for (const trig of item.triggers) {
-      if (p.includes(trig) && (p.includes('table') || p.includes('from') || p.includes('select') || p.includes('top') || p.includes('show') || p.includes('list'))) {
-        return {
-          sql: `SELECT * FROM ${item.table} LIMIT ${limit};`,
-          explanation: `Retrieves top ${limit} records directly from Guidewire ${item.table} table. Protected NPI columns are dynamically sanitized.`,
-          confidence: 'high',
-          insufficientInfo: null,
-          suggestedChartType: 'table'
-        };
+  // Only use generic table dump if prompt does NOT contain specific filter conditions
+  const hasFilterCondition = /\b(start|starts|starting|where|like|contain|contains|named|called|greater|less|above|below|status|past due|paid|due)\b/i.test(p);
+  if (!hasFilterCondition) {
+    for (const item of tableMap) {
+      for (const trig of item.triggers) {
+        if (p.includes(trig) && (p.includes('table') || p.includes('from') || p.includes('select') || p.includes('top') || p.includes('show') || p.includes('list'))) {
+          return {
+            sql: `SELECT * FROM ${item.table} LIMIT ${limit};`,
+            explanation: `Retrieves top ${limit} records directly from Guidewire ${item.table} table. Protected NPI columns are dynamically sanitized.`,
+            confidence: 'high',
+            insufficientInfo: null,
+            suggestedChartType: 'table'
+          };
+        }
       }
     }
   }
