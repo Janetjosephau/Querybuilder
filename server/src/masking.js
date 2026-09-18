@@ -11,11 +11,11 @@ const CREDIT_CARD_REGEX = /^\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}$/;
 
 // Known NPI column identifiers (case-insensitive substring match)
 const NPI_COLUMN_RULES = [
-  { match: /ssn|social_security|tax_id|taxid/i, type: 'SSN' },
+  { match: /ssn|social_security|tax_id|taxid|fein/i, type: 'SSN' },
   { match: /bank_account|account_num|routing|card_num|credit_card/i, type: 'FINANCIAL' },
   { match: /email/i, type: 'EMAIL' },
   { match: /phone|mobile|fax/i, type: 'PHONE' },
-  { match: /dob|birth_date|date_of_birth/i, type: 'DOB' },
+  { match: /dob|birth_date|date_of_birth|dateofbirth/i, type: 'DOB' },
   { match: /claimant_name/i, type: 'CLAIMANT' },
   { match: /street_address|home_address/i, type: 'ADDRESS' }
 ];
