@@ -77,7 +77,7 @@ async function getAvailableModels() {
     return {
       success: false,
       error: err.message,
-      models: ['qwen2.5-coder:7b', 'llama3:latest', 'mistral:7b'],
+      models: ['qwen2.5-coder:7b', 'qwen3:4b', 'qwen:7b', 'llama3:latest', 'mistral:7b'],
       current: selectedModel
     };
   }

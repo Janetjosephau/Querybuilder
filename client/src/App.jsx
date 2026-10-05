@@ -12,7 +12,7 @@ export default function App() {
   const [schema, setSchema] = useState(null);
   const [dbMode, setDbMode] = useState('demo');
   const [activeModel, setActiveModel] = useState('qwen2.5-coder:7b');
-  const [availableModels, setAvailableModels] = useState(['qwen2.5-coder:7b', 'llama3:latest', 'mistral:7b']);
+  const [availableModels, setAvailableModels] = useState(['qwen2.5-coder:7b', 'qwen3:4b', 'qwen:7b', 'llama3:latest', 'mistral:7b']);
   
   const [queryResult, setQueryResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
