@@ -126,6 +126,14 @@ runTest('Positive: Latest payment join with policy in Demo mode', () => {
   assert.ok(res.sql.includes('bc_invoice'));
 });
 
+runTest('Positive: Policy expiration query in TWIA mode', () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery('give me policy which are expired in last one month', { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('bc_policyperiod'));
+  assert.ok(res.sql.includes('Expired') || res.sql.includes('CURRENT_DATE'));
+});
+
 runTest('Positive: verifySqlAgainstCatalog supports schema-qualified tables (e.g. public.bc_account)', () => {
   const sql = 'SELECT * FROM public.bc_account a JOIN public.bc_invoice i ON a.id = i.accountid';
   const schema = {

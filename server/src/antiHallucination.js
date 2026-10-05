@@ -100,30 +100,39 @@ function verifySqlAgainstCatalog(sql, schema) {
  * Select relevant tables for the prompt when schema has many tables (>35)
  */
 function selectRelevantTables(tables, prompt = '') {
-  if (!tables || tables.length <= 35) return tables || [];
+  if (!tables || tables.length <= 12) return tables || [];
 
   const promptWords = prompt.toLowerCase().split(/[^a-z0-9_]+/).filter(w => w.length > 2);
   const scored = tables.map(t => {
     let score = 0;
     const tName = t.name.toLowerCase();
     
-    if (promptWords.some(w => tName === w || tName.includes(w))) score += 10;
+    // Direct table name hit
+    if (promptWords.some(w => tName === w || tName.includes(w))) score += 15;
     
+    // Core insurance domain keyword mappings
+    if ((promptWords.includes('policy') || promptWords.includes('policies') || promptWords.includes('expired')) && tName.includes('policy')) score += 12;
+    if ((promptWords.includes('invoice') || promptWords.includes('invoices') || promptWords.includes('billed') || promptWords.includes('due')) && tName.includes('invoice')) score += 12;
+    if ((promptWords.includes('account') || promptWords.includes('accounts')) && tName.includes('account')) score += 12;
+    if ((promptWords.includes('payment') || promptWords.includes('paid')) && (tName.includes('payment') || tName.includes('money'))) score += 12;
+
     // Core Guidewire BillingCenter & PolicyCenter anchor tables
-    if (['bc_account', 'bc_invoice', 'bc_payment', 'bc_accountpaymentplan', 'bc_policyperiod', 'bc_charge', 'bc_producer', 'pc_policy', 'pc_policyholder', 'cc_claim'].includes(tName)) {
-      score += 4;
+    if (['bc_account', 'bc_invoice', 'bc_payment', 'bc_policyperiod', 'bc_basemoneyreceived', 'bc_accountpaymentplan', 'bc_producer', 'pc_policy', 'pc_policyperiod'].includes(tName)) {
+      score += 5;
     }
 
     for (const col of t.columns) {
       const cName = col.name.toLowerCase();
-      if (promptWords.includes(cName)) score += 2;
+      if (promptWords.includes(cName)) score += 3;
     }
 
     return { table: t, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 30).map(s => s.table);
+  // Keep only the top 10 most relevant tables to maintain fast token ingestion on CPU
+  const topTables = scored.filter(s => s.score > 0).slice(0, 10).map(s => s.table);
+  return topTables.length > 0 ? topTables : scored.slice(0, 6).map(s => s.table);
 }
 
 /**
@@ -136,8 +145,27 @@ function buildAntiHallucinationSystemPrompt(schema, prompt = '') {
   const activeTables = selectRelevantTables(schema.tables, prompt);
 
   const schemaDescription = activeTables.map(t => {
-    const cols = t.columns.map(c => `${c.name}${c.isNpi ? ' [NPI]' : ''}`).join(', ');
-    return `TABLE ${t.name}(${cols})`;
+    // Keep most relevant columns per table to avoid CPU decoding bottlenecks
+    const relevantCols = t.columns.filter(c => {
+      const cName = c.name.toLowerCase();
+      return (
+        c.isNpi ||
+        cName === 'id' ||
+        cName.includes('id') ||
+        cName.includes('name') ||
+        cName.includes('number') ||
+        cName.includes('status') ||
+        cName.includes('type') ||
+        cName.includes('date') ||
+        cName.includes('amount') ||
+        cName.includes('premium') ||
+        cName.includes('due') ||
+        cName.includes('currency')
+      );
+    });
+    const colsToUse = relevantCols.length >= 4 ? relevantCols.slice(0, 25) : t.columns.slice(0, 25);
+    const colsStr = colsToUse.map(c => `${c.name}${c.isNpi ? ' [NPI]' : ''}`).join(', ');
+    return `TABLE ${t.name}(${colsStr})`;
   }).join('\n');
 
   return `ROLE: Expert Guidewire Insurance Text-to-SQL Generator.

@@ -8,7 +8,7 @@ const { buildAntiHallucinationSystemPrompt, verifySqlAgainstCatalog, checkInform
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || '127.0.0.1';
 const OLLAMA_PORT = process.env.OLLAMA_PORT || 11434;
-const OLLAMA_TIMEOUT_MS = parseInt(process.env.OLLAMA_TIMEOUT_MS, 10) || 90000;
+const OLLAMA_TIMEOUT_MS = parseInt(process.env.OLLAMA_TIMEOUT_MS, 10) || 120000;
 let selectedModel = 'qwen2.5-coder:7b';
 
 /**
@@ -104,6 +104,82 @@ function getDeterministicGuidewireQuery(prompt, schema = null) {
     limit = parseInt(limitMatch[1], 10);
     if (isNaN(limit) || limit <= 0) limit = 10;
     if (limit > 200) limit = 200;
+  }
+
+  // 0.05 Policy Status & Expiration Queries (e.g. "expired in last one month", "expired policies", "in-force policies", "cancelled policies")
+  const isPolicyStatusQuery = (
+    p.includes('policy') || p.includes('policies') || p.includes('pc_policy') || p.includes('bc_policyperiod')
+  ) && (
+    p.includes('expire') || p.includes('expired') || p.includes('expiration') ||
+    p.includes('in-force') || p.includes('in force') || p.includes('active') ||
+    p.includes('cancel') || p.includes('cancelled') || p.includes('canceled')
+  ) && !p.includes('holder') && !p.includes('ssn') && !p.includes('loss ratio') && !p.includes('claim');
+
+  if (isPolicyStatusQuery) {
+    const isImported = schema?.mode === 'imported';
+    const isExpired = p.includes('expire') || p.includes('expired') || p.includes('expiration');
+    const isCancelled = p.includes('cancel') || p.includes('cancelled') || p.includes('canceled');
+
+    if (isImported) {
+      let whereClause = "pp.cancelstatus = 'Expired' OR pp.policyperexpirdate <= CURRENT_DATE";
+      let explanationStatus = 'expired';
+      if (isCancelled) {
+        whereClause = "pp.cancelstatus = 'Cancelled' OR pp.cancelstatus = 'Canceled'";
+        explanationStatus = 'cancelled';
+      } else if (!isExpired) {
+        whereClause = "pp.cancelstatus = 'In Force' OR pp.policyperexpirdate > CURRENT_DATE";
+        explanationStatus = 'in-force';
+      }
+
+      return {
+        sql: `SELECT 
+  pp.policynumber,
+  pp.policytype_ext AS policy_type,
+  a.accountname,
+  a.accountnumber,
+  pp.policypereffdate AS effective_date,
+  pp.policyperexpirdate AS expiration_date,
+  pp.cancelstatus AS status
+FROM bc_policyperiod pp
+JOIN bc_account a ON pp.accountid = a.id
+WHERE ${whereClause}
+ORDER BY pp.policyperexpirdate DESC
+LIMIT ${limit};`,
+        explanation: `Retrieves ${explanationStatus} policies from bc_policyperiod joined with account details from bc_account. Protected NPI columns are automatically sanitized.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      let whereClause = "p.status = 'Expired' OR pp.periodend <= CURRENT_DATE";
+      let explanationStatus = 'expired';
+      if (isCancelled) {
+        whereClause = "p.status = 'Canceled' OR p.status = 'Cancelled'";
+        explanationStatus = 'cancelled';
+      } else if (!isExpired) {
+        whereClause = "p.status = 'In Force'";
+        explanationStatus = 'in-force';
+      }
+
+      return {
+        sql: `SELECT 
+  p.policynumber,
+  p.productcode,
+  p.status,
+  pp.periodstart AS effective_date,
+  pp.periodend AS expiration_date,
+  pp.totalpremium
+FROM pc_policy p
+JOIN pc_policyperiod pp ON p.id = pp.policy_id
+WHERE ${whereClause}
+ORDER BY pp.periodend DESC
+LIMIT ${limit};`,
+        explanation: `Retrieves ${explanationStatus} policies from pc_policy joined with pc_policyperiod terms. Protected NPI columns are automatically sanitized.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
   }
 
   // 0. Policyholder Queries & Variations (pc_policyholder, pc_policholder, policy holder, etc.)

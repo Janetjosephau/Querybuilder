@@ -493,9 +493,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-com-1001',
       termnumber: 1,
       policypereffdate: '2025-01-15',
-      policyperexpirdate: '2026-01-15',
+      policyperexpirdate: '2027-01-15',
       policytype_ext: 'Commercial Property',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 2,
@@ -505,9 +507,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-com-1002',
       termnumber: 1,
       policypereffdate: '2025-02-10',
-      policyperexpirdate: '2026-02-10',
+      policyperexpirdate: '2027-02-10',
       policytype_ext: 'Commercial Marine',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 3,
@@ -517,9 +521,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-res-2001',
       termnumber: 1,
       policypereffdate: '2025-03-01',
-      policyperexpirdate: '2026-03-01',
+      policyperexpirdate: '2027-03-01',
       policytype_ext: 'Residential Dwelling',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 4,
@@ -529,9 +535,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-com-1003',
       termnumber: 1,
       policypereffdate: '2025-03-12',
-      policyperexpirdate: '2026-03-12',
+      policyperexpirdate: '2027-03-12',
       policytype_ext: 'Industrial Property',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 5,
@@ -541,9 +549,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-com-1004',
       termnumber: 1,
       policypereffdate: '2025-04-05',
-      policyperexpirdate: '2026-04-05',
+      policyperexpirdate: '2027-04-05',
       policytype_ext: 'Commercial Hotel',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 6,
@@ -553,9 +563,11 @@ function generateTwiaBillingData() {
       policynumberdenorm: 'twia-pol-res-2002',
       termnumber: 1,
       policypereffdate: '2025-04-18',
-      policyperexpirdate: '2026-04-18',
+      policyperexpirdate: '2027-04-18',
       policytype_ext: 'Residential Dwelling',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'In Force',
+      status: 'In Force'
     },
     {
       id: 7,
@@ -564,10 +576,12 @@ function generateTwiaBillingData() {
       policynumber: 'TWIA-POL-COM-1005',
       policynumberdenorm: 'twia-pol-com-1005',
       termnumber: 1,
-      policypereffdate: '2025-05-02',
-      policyperexpirdate: '2026-05-02',
+      policypereffdate: '2025-09-15',
+      policyperexpirdate: '2026-09-15',
       policytype_ext: 'Commercial Warehouse',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'Expired',
+      status: 'Expired'
     },
     {
       id: 8,
@@ -576,10 +590,12 @@ function generateTwiaBillingData() {
       policynumber: 'TWIA-POL-RES-2003',
       policynumberdenorm: 'twia-pol-res-2003',
       termnumber: 1,
-      policypereffdate: '2025-05-20',
-      policyperexpirdate: '2026-05-20',
+      policypereffdate: '2025-09-22',
+      policyperexpirdate: '2026-09-22',
       policytype_ext: 'Residential Dwelling',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'Expired',
+      status: 'Expired'
     },
     {
       id: 9,
@@ -591,7 +607,9 @@ function generateTwiaBillingData() {
       policypereffdate: '2025-06-01',
       policyperexpirdate: '2026-06-01',
       policytype_ext: 'Commercial Food Processing',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'Expired',
+      status: 'Expired'
     },
     {
       id: 10,
@@ -600,10 +618,12 @@ function generateTwiaBillingData() {
       policynumber: 'TWIA-POL-RES-2004',
       policynumberdenorm: 'twia-pol-res-2004',
       termnumber: 1,
-      policypereffdate: '2025-06-15',
-      policyperexpirdate: '2026-06-15',
+      policypereffdate: '2025-10-01',
+      policyperexpirdate: '2026-10-01',
       policytype_ext: 'Residential Dwelling',
-      primarycoveragecurrency: 'USD'
+      primarycoveragecurrency: 'USD',
+      cancelstatus: 'Expired',
+      status: 'Expired'
     }
   ];
 
