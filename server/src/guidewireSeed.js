@@ -150,6 +150,23 @@ function generateGuidewireData() {
     { id: 8, claim_id: 8, exposure_id: 8, totalreserves: 0.00, totalpaid: 28000.00, recoveries: 3500.00, netincurred: 24500.00 }
   ];
 
+  // Ensure cross-compatible aliases
+  accounts.forEach(a => {
+    a.policyperiodid = a.policy_id;
+    a.policyperiod_id = a.policy_id;
+  });
+
+  invoices.forEach(i => {
+    i.accountid = i.account_id;
+    i.netamountpaid = i.paidamount;
+    i.paymentduedate = i.duedate;
+  });
+
+  payments.forEach(p => {
+    p.invoiceid = p.invoice_id;
+    p.receiveddate = p.paymentdate;
+  });
+
   return {
     pc_policy: policies,
     pc_policyperiod: policyperiods,
@@ -158,6 +175,7 @@ function generateGuidewireData() {
     bc_account: accounts,
     bc_invoice: invoices,
     bc_payment: payments,
+    bc_basemoneyreceived: payments,
     cc_claim: claims,
     cc_claimant: claimants,
     cc_exposure: exposures,

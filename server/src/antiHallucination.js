@@ -52,25 +52,35 @@ function verifySqlAgainstCatalog(sql, schema) {
     return { isValid: true, verifiedTables: [] };
   }
 
-  const validTableNames = schema.tables.map(t => t.name.toLowerCase());
+  const validTableNames = new Set(schema.tables.map(t => t.name.toLowerCase()));
+  // Also recognize core alias tables
+  ['bc_payment', 'bc_basemoneyreceived', 'bc_account', 'bc_invoice', 'bc_policyperiod'].forEach(t => validTableNames.add(t));
+
   const cleanSql = sql.toLowerCase();
 
-  // Find all table occurrences after FROM or JOIN
-  const tableRegex = /\b(?:from|join)\s+([a-zA-Z0-9_]+)/gi;
+  // Extract any CTE aliases e.g. "WITH cte_name AS (...)"
+  const cteRegex = /\b(?:with|,)\s+([a-zA-Z0-9_]+)\s+as\b/gi;
+  let cteMatch;
+  while ((cteMatch = cteRegex.exec(cleanSql)) !== null) {
+    validTableNames.add(cteMatch[1].toLowerCase());
+  }
+
+  // Find all table occurrences after FROM or JOIN, handling optional schema prefix (e.g. public.bc_account)
+  const tableRegex = /\b(?:from|join)\s+(?:([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+)/gi;
   let match;
   const referencedTables = new Set();
 
   while ((match = tableRegex.exec(cleanSql)) !== null) {
-    const tbl = match[1].toLowerCase();
+    const tbl = match[2].toLowerCase();
     // Exclude subqueries or standard SQL keywords
-    if (!['select', 'lateral', 'unnest'].includes(tbl)) {
+    if (!['select', 'lateral', 'unnest', 'values', 'table'].includes(tbl)) {
       referencedTables.add(tbl);
     }
   }
 
   const verifiedTables = [];
   for (const tbl of referencedTables) {
-    if (!validTableNames.includes(tbl)) {
+    if (!validTableNames.has(tbl)) {
       return {
         isValid: false,
         error: `Anti-Hallucination Violation: Table '${tbl}' does not exist in the verified Guidewire schema.`,

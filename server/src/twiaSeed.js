@@ -422,6 +422,7 @@ function generateTwiaBillingData() {
       publicid: 'bc:mr:5001',
       accountid: 1,
       invoiceid: 1,
+      policyperiodid: 1,
       amount: 14500.00,
       currency: 'USD',
       receiveddate: '2025-02-12',
@@ -434,6 +435,7 @@ function generateTwiaBillingData() {
       publicid: 'bc:mr:5002',
       accountid: 2,
       invoiceid: 3,
+      policyperiodid: 2,
       amount: 18200.00,
       currency: 'USD',
       receiveddate: '2025-03-08',
@@ -446,6 +448,7 @@ function generateTwiaBillingData() {
       publicid: 'bc:mr:5003',
       accountid: 3,
       invoiceid: 4,
+      policyperiodid: 3,
       amount: 2450.00,
       currency: 'USD',
       receiveddate: '2025-03-29',
@@ -458,6 +461,7 @@ function generateTwiaBillingData() {
       publicid: 'bc:mr:5004',
       accountid: 5,
       invoiceid: 6,
+      policyperiodid: 5,
       amount: 22400.00,
       currency: 'USD',
       receiveddate: '2025-05-02',
@@ -470,12 +474,136 @@ function generateTwiaBillingData() {
       publicid: 'bc:mr:5005',
       accountid: 6,
       invoiceid: 7,
+      policyperiodid: 6,
       amount: 3100.00,
       currency: 'USD',
       receiveddate: '2025-05-15',
       refnumber: 'TXN-CC-782019',
       description: 'Online Portal Payment for INV-TWIA-2025-007',
       paymentinstrumentid: 5
+    }
+  ];
+
+  const policyPeriods = [
+    {
+      id: 1,
+      publicid: 'bc:pp:8001',
+      accountid: 1,
+      policynumber: 'TWIA-POL-COM-1001',
+      policynumberdenorm: 'twia-pol-com-1001',
+      termnumber: 1,
+      policypereffdate: '2025-01-15',
+      policyperexpirdate: '2026-01-15',
+      policytype_ext: 'Commercial Property',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 2,
+      publicid: 'bc:pp:8002',
+      accountid: 2,
+      policynumber: 'TWIA-POL-COM-1002',
+      policynumberdenorm: 'twia-pol-com-1002',
+      termnumber: 1,
+      policypereffdate: '2025-02-10',
+      policyperexpirdate: '2026-02-10',
+      policytype_ext: 'Commercial Marine',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 3,
+      publicid: 'bc:pp:8003',
+      accountid: 3,
+      policynumber: 'TWIA-POL-RES-2001',
+      policynumberdenorm: 'twia-pol-res-2001',
+      termnumber: 1,
+      policypereffdate: '2025-03-01',
+      policyperexpirdate: '2026-03-01',
+      policytype_ext: 'Residential Dwelling',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 4,
+      publicid: 'bc:pp:8004',
+      accountid: 4,
+      policynumber: 'TWIA-POL-COM-1003',
+      policynumberdenorm: 'twia-pol-com-1003',
+      termnumber: 1,
+      policypereffdate: '2025-03-12',
+      policyperexpirdate: '2026-03-12',
+      policytype_ext: 'Industrial Property',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 5,
+      publicid: 'bc:pp:8005',
+      accountid: 5,
+      policynumber: 'TWIA-POL-COM-1004',
+      policynumberdenorm: 'twia-pol-com-1004',
+      termnumber: 1,
+      policypereffdate: '2025-04-05',
+      policyperexpirdate: '2026-04-05',
+      policytype_ext: 'Commercial Hotel',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 6,
+      publicid: 'bc:pp:8006',
+      accountid: 6,
+      policynumber: 'TWIA-POL-RES-2002',
+      policynumberdenorm: 'twia-pol-res-2002',
+      termnumber: 1,
+      policypereffdate: '2025-04-18',
+      policyperexpirdate: '2026-04-18',
+      policytype_ext: 'Residential Dwelling',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 7,
+      publicid: 'bc:pp:8007',
+      accountid: 7,
+      policynumber: 'TWIA-POL-COM-1005',
+      policynumberdenorm: 'twia-pol-com-1005',
+      termnumber: 1,
+      policypereffdate: '2025-05-02',
+      policyperexpirdate: '2026-05-02',
+      policytype_ext: 'Commercial Warehouse',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 8,
+      publicid: 'bc:pp:8008',
+      accountid: 8,
+      policynumber: 'TWIA-POL-RES-2003',
+      policynumberdenorm: 'twia-pol-res-2003',
+      termnumber: 1,
+      policypereffdate: '2025-05-20',
+      policyperexpirdate: '2026-05-20',
+      policytype_ext: 'Residential Dwelling',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 9,
+      publicid: 'bc:pp:8009',
+      accountid: 9,
+      policynumber: 'TWIA-POL-COM-1006',
+      policynumberdenorm: 'twia-pol-com-1006',
+      termnumber: 1,
+      policypereffdate: '2025-06-01',
+      policyperexpirdate: '2026-06-01',
+      policytype_ext: 'Commercial Food Processing',
+      primarycoveragecurrency: 'USD'
+    },
+    {
+      id: 10,
+      publicid: 'bc:pp:8010',
+      accountid: 10,
+      policynumber: 'TWIA-POL-RES-2004',
+      policynumberdenorm: 'twia-pol-res-2004',
+      termnumber: 1,
+      policypereffdate: '2025-06-15',
+      policyperexpirdate: '2026-06-15',
+      policytype_ext: 'Residential Dwelling',
+      primarycoveragecurrency: 'USD'
     }
   ];
 
@@ -522,12 +650,40 @@ function generateTwiaBillingData() {
     { id: 5, publicid: 'bc:plan:7005', accountid: 5, paymentplanid: 101, currency: 'USD' }
   ];
 
+  // Populate cross-compatible aliases so standard SQL and Guidewire queries both succeed
+  accounts.forEach(a => {
+    a.policy_id = a.id;
+    a.policyperiodid = a.id;
+    a.policyperiod_id = a.id;
+  });
+
+  invoices.forEach(i => {
+    i.account_id = i.accountid;
+    i.policyperiodid = i.accountid;
+    i.policyperiod_id = i.accountid;
+    i.paidamount = i.netamountpaid;
+    i.duedate = i.paymentduedate;
+  });
+
+  moneyReceived.forEach(m => {
+    m.account_id = m.accountid;
+    m.invoice_id = m.invoiceid;
+    m.policyperiod_id = m.policyperiodid;
+    m.paymentdate = m.receiveddate;
+  });
+
+  policyPeriods.forEach(pp => {
+    pp.account_id = pp.accountid;
+    pp.policy_id = pp.id;
+  });
+
   return {
     bc_account: accounts,
     bc_invoice: invoices,
     bc_contact: contacts,
     bc_paymentinstrument: paymentInstruments,
     bc_basemoneyreceived: moneyReceived,
+    bc_policyperiod: policyPeriods,
     bc_producer: producers,
     bc_accountpaymentplan: paymentPlans
   };

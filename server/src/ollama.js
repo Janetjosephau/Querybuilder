@@ -94,7 +94,7 @@ function setModel(modelName) {
 /**
  * Rule-based fallback for common Guidewire queries (ensures instant zero-latency responses for POC)
  */
-function getDeterministicGuidewireQuery(prompt) {
+function getDeterministicGuidewireQuery(prompt, schema = null) {
   const p = prompt.toLowerCase();
 
   // Extract custom limit if specified e.g. "top 10", "first 5", "limit 20"
@@ -184,7 +184,7 @@ LIMIT ${limit};`,
   // 0.2 Invoice Status filters (e.g. "past due invoices", "paid invoices")
   if (p.includes('invoice') && (p.includes('past due') || p.includes('pastdue') || p.includes('delinquent'))) {
     return {
-      sql: `SELECT * FROM bc_invoice WHERE status = 'PastDue' LIMIT ${limit};`,
+      sql: `SELECT * FROM bc_invoice WHERE status = 'PastDue' OR status = 'Past Due' LIMIT ${limit};`,
       explanation: `Retrieves past-due invoices from bc_invoice.`,
       confidence: 'high',
       insufficientInfo: null,
@@ -345,8 +345,30 @@ LIMIT 15;`,
 
   // 6. Past Due Invoices
   if (p.includes('past due') || (p.includes('invoice') && p.includes('due')) || (p.includes('billing') && p.includes('overdue'))) {
-    return {
-      sql: `SELECT 
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT 
+  i.invoicenumber,
+  a.accountnumber,
+  a.accountname,
+  i.paymentduedate AS duedate,
+  i.amount AS billed_amount,
+  i.amountdue AS past_due_balance,
+  i.status
+FROM bc_invoice i
+JOIN bc_account a ON (i.accountid = a.id OR i.account_id = a.id)
+WHERE i.status = 'PastDue' OR i.status = 'Past Due'
+ORDER BY past_due_balance DESC
+LIMIT ${limit};`,
+        explanation: 'Lists all past-due invoices from bc_invoice joined with bc_account, showing outstanding balances.',
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT 
   i.invoicenumber,
   a.accountnumber,
   p.policynumber,
@@ -359,16 +381,147 @@ FROM bc_invoice i
 JOIN bc_account a ON i.account_id = a.id
 JOIN pc_policy p ON a.policy_id = p.id
 WHERE i.status = 'Past Due'
-ORDER BY past_due_balance DESC;`,
-      explanation: 'Lists all past-due invoices from bc_invoice joined with bc_account and pc_policy, calculating outstanding balances.',
-      confidence: 'high',
-      insufficientInfo: null,
-      suggestedChartType: 'table'
-    };
+ORDER BY past_due_balance DESC
+LIMIT ${limit};`,
+        explanation: 'Lists all past-due invoices from bc_invoice joined with bc_account and pc_policy, calculating outstanding balances.',
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
   }
 
-  // 7. Payments and Collections
-  if (p.includes('payment') || p.includes('ach') || p.includes('credit card') || p.includes('lockbox')) {
+  // 6.5 Latest / Last Payment Received with Policy / Invoice / Account Details
+  const isLatestPaymentQuery = (
+    (p.includes('payment') || p.includes('paid') || p.includes('money')) &&
+    (p.includes('last') || p.includes('latest') || p.includes('recent') || p.includes('recently') || p.includes('yesterday'))
+  );
+
+  if (isLatestPaymentQuery) {
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT 
+  pp.policynumber,
+  i.invoicenumber,
+  a.accountname,
+  a.accountnumber,
+  b.amount AS payment_amount,
+  b.receiveddate AS payment_date,
+  b.refnumber
+FROM bc_basemoneyreceived b
+JOIN bc_invoice i ON (b.invoiceid = i.id OR b.invoice_id = i.id)
+JOIN bc_policyperiod pp ON (b.policyperiodid = pp.id OR b.policyperiod_id = pp.id)
+JOIN bc_account a ON (b.accountid = a.id OR b.account_id = a.id)
+ORDER BY b.receiveddate DESC
+LIMIT ${limit};`,
+        explanation: `Retrieves the latest payment received joined with the invoice, policy number from bc_policyperiod, and account name. Protected NPI columns are automatically sanitized.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT 
+  p.policynumber,
+  i.invoicenumber,
+  a.accountnumber,
+  pay.amount AS payment_amount,
+  pay.paymentdate,
+  pay.paymentmethod
+FROM bc_payment pay
+JOIN bc_invoice i ON (pay.invoice_id = i.id OR pay.invoiceid = i.id)
+JOIN bc_account a ON (i.account_id = a.id OR i.accountid = a.id)
+JOIN pc_policy p ON (a.policy_id = p.id OR a.id = p.id)
+ORDER BY pay.paymentdate DESC
+LIMIT ${limit};`,
+        explanation: `Retrieves the latest payment received from bc_payment joined with invoice, account, and policy details. Protected NPI columns are automatically sanitized.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
+  }
+
+  // 6.6 Account and Invoice Join queries
+  const isAccountInvoiceJoin = (
+    (p.includes('account') || p.includes('bc_account')) &&
+    (p.includes('invoice') || p.includes('bc_invoice')) &&
+    (p.includes('join') || p.includes('with') || p.includes('and') || p.includes('for') || p.includes('show') || p.includes('list'))
+  );
+
+  if (isAccountInvoiceJoin && !p.includes('past due') && !p.includes('paid')) {
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT 
+  a.accountnumber,
+  a.accountname,
+  a.accounttype,
+  i.invoicenumber,
+  i.amount,
+  i.status,
+  i.paymentduedate
+FROM bc_account a
+JOIN bc_invoice i ON a.id = i.accountid
+LIMIT ${limit};`,
+        explanation: `Retrieves billing accounts joined with their corresponding invoices from bc_account and bc_invoice.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT 
+  a.accountnumber,
+  p.policynumber,
+  i.invoicenumber,
+  i.amount,
+  i.status,
+  i.duedate
+FROM bc_account a
+JOIN bc_invoice i ON a.id = i.account_id
+LEFT JOIN pc_policy p ON a.policy_id = p.id
+LIMIT ${limit};`,
+        explanation: `Retrieves accounts joined with invoices and policy numbers from bc_account, bc_invoice, and pc_policy.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
+  }
+
+  // 6.7 Payment Plans query
+  if (p.includes('payment plan') || p.includes('payment plans') || p.includes('bc_accountpaymentplan')) {
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT * FROM bc_accountpaymentplan LIMIT ${limit};`,
+        explanation: `Retrieves payment plans configured for BillingCenter accounts from bc_accountpaymentplan.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT DISTINCT paymentplan, billingmethod FROM bc_account;`,
+        explanation: `Lists distinct payment plans and billing methods available across Guidewire accounts.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
+  }
+
+  // 7. Payments and Collections Summary by Settlement Method
+  const isPaymentMethodAggregation = (
+    p.includes('payment method') ||
+    p.includes('settled amount') ||
+    p.includes('by method') ||
+    (p.includes('payment') && (p.includes('ach') || p.includes('credit card') || p.includes('lockbox') || p.includes('methods') || p.includes('breakdown') || p.includes('distribution') || p.includes('summary')))
+  );
+
+  if (isPaymentMethodAggregation) {
     return {
       sql: `SELECT 
   p.paymentmethod,
@@ -383,10 +536,32 @@ GROUP BY p.paymentmethod;`,
     };
   }
 
-  // 8. Billing Accounts & Payment Plans
-  if (p.includes('billing') || p.includes('account') || p.includes('payment plan')) {
-    return {
-      sql: `SELECT 
+  // 8. Billing Accounts & Policies Overview
+  const isAccountOverview = (
+    (p.includes('billing account') || p.includes('account overview') || (p.includes('account') && (p.includes('list') || p.includes('show all') || p.includes('accounts')))) &&
+    !p.includes('invoice') && !p.includes('contact') && !p.includes('payment') && !p.includes('producer') && !p.includes('join')
+  );
+
+  if (isAccountOverview) {
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT 
+  a.accountnumber,
+  a.accountname,
+  a.accounttype,
+  a.delinquencystatus,
+  a.servicetier
+FROM bc_account a
+LIMIT ${limit};`,
+        explanation: 'Retrieves TWIA BillingCenter accounts with account names, types, and delinquency status.',
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT 
   a.accountnumber,
   a.paymentplan,
   p.policynumber,
@@ -395,11 +570,12 @@ GROUP BY p.paymentmethod;`,
 FROM bc_account a
 JOIN pc_policy p ON a.policy_id = p.id
 LIMIT 15;`,
-      explanation: 'Retrieves BillingCenter accounts joined with corresponding PolicyCenter policies and payment plans (Annual, Quarterly, Monthly 10-Pay).',
-      confidence: 'high',
-      insufficientInfo: null,
-      suggestedChartType: 'table'
-    };
+        explanation: 'Retrieves BillingCenter accounts joined with corresponding PolicyCenter policies and payment plans (Annual, Quarterly, Monthly 10-Pay).',
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
   }
 
   // 9. Policyholders & Insureds (NPI Protected)
@@ -485,7 +661,7 @@ async function generateSql(prompt, schema) {
   }
 
   // Quick check for deterministic match to guarantee zero-latency accuracy on standard queries
-  const deterministic = getDeterministicGuidewireQuery(prompt);
+  const deterministic = getDeterministicGuidewireQuery(prompt, schema);
   if (deterministic) {
     return deterministic;
   }
@@ -561,5 +737,6 @@ async function generateSql(prompt, schema) {
 module.exports = {
   getAvailableModels,
   setModel,
-  generateSql
+  generateSql,
+  getDeterministicGuidewireQuery
 };

@@ -39,6 +39,30 @@ function initTwiaBillingDatabase() {
     alasql(`CREATE TABLE ${tableName}`);
     alasql.tables[tableName].data = [...data[tableName]];
   }
+
+  // Create bc_payment compatibility table pointing to bc_basemoneyreceived
+  try {
+    alasql(`DROP TABLE IF EXISTS bc_payment`);
+  } catch (e) {}
+  alasql(`CREATE TABLE bc_payment`);
+  alasql.tables['bc_payment'].data = data.bc_basemoneyreceived.map(m => ({
+    id: m.id,
+    publicid: m.publicid,
+    accountid: m.accountid,
+    account_id: m.accountid,
+    invoiceid: m.invoiceid,
+    invoice_id: m.invoiceid,
+    policyperiodid: m.policyperiodid,
+    policyperiod_id: m.policyperiodid,
+    amount: m.amount,
+    currency: m.currency,
+    receiveddate: m.receiveddate,
+    paymentdate: m.receiveddate,
+    refnumber: m.refnumber,
+    description: m.description,
+    paymentmethod: (m.paymentinstrumentid === 3 || m.paymentinstrumentid === 5) ? 'Credit Card' : 'ACH'
+  }));
+
   console.log('[DB] TWIA BillingCenter Synthetic Data seeded successfully for key tables.');
 }
 
@@ -111,6 +135,7 @@ async function connectPostgres(config) {
  */
 function switchToDemo() {
   currentMode = 'demo';
+  initDemoDatabase();
   return { success: true, mode: 'demo' };
 }
 
@@ -119,6 +144,7 @@ function switchToDemo() {
  */
 function switchToImported() {
   currentMode = 'imported';
+  initTwiaBillingDatabase();
   return { success: true, mode: 'imported', tablesCount: importedSchema?.tableCount || 0 };
 }
 
@@ -256,9 +282,20 @@ async function executeQuery(rawSql) {
       const result = alasql(finalSql);
       rawRows = Array.isArray(result) ? result : [];
     } catch (err) {
-      // If table is valid in Guidewire schema but not populated with mock records yet, return clean empty result
-      console.warn(`[SQL Execution Notice] ${err.message}`);
-      rawRows = [];
+      const isMissingTable = err.message && err.message.toLowerCase().includes('table does not exist');
+      const tableNameMatch = err.message && err.message.match(/Table does not exist:\s*([a-zA-Z0-9_]+)/i);
+      const missingTable = tableNameMatch ? tableNameMatch[1].toLowerCase() : null;
+      const isValidInSchema = missingTable && (
+        importedSchema?.tables?.some(t => t.name.toLowerCase() === missingTable) ||
+        ['pc_policy', 'pc_policyperiod', 'pc_coverage', 'pc_policyholder', 'cc_claim', 'cc_claimant', 'cc_exposure', 'cc_financials', 'bc_account', 'bc_invoice', 'bc_payment'].includes(missingTable)
+      );
+
+      if (isMissingTable && isValidInSchema) {
+        console.warn(`[SQL Execution Notice] Table '${missingTable}' exists in Guidewire schema catalog but has 0 records in current test database.`);
+        rawRows = [];
+      } else {
+        throw new Error(`SQL Execution Error: ${err.message}`);
+      }
     }
   }
 

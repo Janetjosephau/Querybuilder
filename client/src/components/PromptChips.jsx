@@ -10,7 +10,8 @@ export default function PromptChips({ onSelectPrompt, activeTab }) {
       suites: ['all'],
       items: [
         'What is our loss ratio for Residential vs Commercial?',
-        'Compare total written premium between Residential and Commercial policies'
+        'Compare total written premium between Residential and Commercial policies',
+        'Show policy number for the invoice that payment was received last'
       ]
     },
     {

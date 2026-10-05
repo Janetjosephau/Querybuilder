@@ -104,7 +104,39 @@ runTest('Error Case: Rejects blank, whitespace, or comment-only SQL', () => {
   assert.ok(result.error.includes('comments or whitespace'));
 });
 
+// 4. JOIN & SCHEMA VERIFICATION TESTS
+const db = require('../src/db');
+const ollama = require('../src/ollama');
+
+runTest('Positive: Latest payment join with policy in TWIA BillingCenter mode', () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery('asking to give policy number for the invoice that payment was recived last', { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('bc_basemoneyreceived'));
+  assert.ok(res.sql.includes('bc_policyperiod'));
+  assert.ok(res.sql.includes('bc_invoice'));
+});
+
+runTest('Positive: Latest payment join with policy in Demo mode', () => {
+  db.switchToDemo();
+  const res = ollama.getDeterministicGuidewireQuery('asking to give policy number for the invoice that payment was recived last', { mode: 'demo' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('bc_payment'));
+  assert.ok(res.sql.includes('pc_policy'));
+  assert.ok(res.sql.includes('bc_invoice'));
+});
+
+runTest('Positive: verifySqlAgainstCatalog supports schema-qualified tables (e.g. public.bc_account)', () => {
+  const sql = 'SELECT * FROM public.bc_account a JOIN public.bc_invoice i ON a.id = i.accountid';
+  const schema = {
+    tables: [{ name: 'bc_account' }, { name: 'bc_invoice' }]
+  };
+  const res = verifySqlAgainstCatalog(sql, schema);
+  assert.strictEqual(res.isValid, true);
+});
+
 console.log(`\nTEST RESULTS: ${passed}/${total} PASSED`);
 if (passed !== total) {
   process.exit(1);
 }
+
