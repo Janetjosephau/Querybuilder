@@ -149,6 +149,18 @@ runTest('Positive: Custom table lockbox batch payments query in TWIA mode', () =
   assert.ok(res && res.sql);
   assert.ok(res.sql.includes('bcx_lockboxlineitem_ext') || res.sql.includes('bc_lockboxlineitem_ext'));
   assert.ok(res.sql.includes('amountpaid'));
+  assert.strictEqual(res.sql.includes('policynumber'), false);
+});
+
+runTest('Positive: Lockbox query dynamically updates SQL to include policy number when requested', async () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery("' Show lockbox payments received from the remittance batch process with policy number", { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('pp.policynumber'));
+  assert.ok(res.sql.includes('bc_policyperiod'));
+  const execResult = await db.executeQuery(res.sql);
+  assert.ok(execResult.rowCount > 0);
+  assert.ok(execResult.rows[0].policynumber);
 });
 
 runTest('Positive: Anti-Hallucination validates custom extension tables (bcx_lockboxlineitem_ext, *_ext)', () => {

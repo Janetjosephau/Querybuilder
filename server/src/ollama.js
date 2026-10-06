@@ -288,26 +288,57 @@ LIMIT ${limit};`,
   if (isLockboxQuery) {
     const isImported = schema?.mode === 'imported';
     const targetLockboxTable = isImported ? 'bcx_lockboxlineitem_ext' : 'bc_lockboxlineitem_ext';
+    const wantsPolicy = p.includes('policy') || p.includes('policynumber');
+    const wantsInvoice = p.includes('invoice');
+
+    let selectCols = [
+      'l.externalpaymentreference',
+      'l.controlcode',
+      'l.sequencenumber',
+      'l.boacoupontype',
+      'l.amountpaid',
+      'l.amountdue'
+    ];
+
+    let joins = [
+      `FROM ${targetLockboxTable} l`,
+      `LEFT JOIN bc_basemoneyreceived b ON (l.moneyreceived = b.id OR l.moneyreceived_id = b.id)`
+    ];
+
+    if (wantsPolicy) {
+      selectCols.push('pp.policynumber');
+      joins.push('LEFT JOIN bc_policyperiod pp ON (b.policyperiodid = pp.id OR b.policyperiod_id = pp.id)');
+    }
+
+    if (wantsInvoice) {
+      selectCols.push('i.invoicenumber');
+      joins.push('LEFT JOIN bc_invoice i ON (b.invoiceid = i.id OR b.invoice_id = i.id)');
+    }
+
+    selectCols.push(
+      'a.accountname',
+      'a.accountnumber',
+      'b.refnumber AS payment_ref',
+      'l.refnumberinternal',
+      'l.createtime AS batch_processed_time'
+    );
+    joins.push('LEFT JOIN bc_account a ON (b.accountid = a.id OR b.account_id = a.id)');
+
+    const formattedSelect = selectCols.map(c => `  ${c}`).join(',\n');
+    const formattedJoins = joins.join('\n');
+
+    let explanation = `Retrieves payments received from the remittance lockbox batch process using custom table ${targetLockboxTable} joined with bc_basemoneyreceived and bc_account.`;
+    if (wantsPolicy && wantsInvoice) {
+      explanation = `Retrieves lockbox remittance batch payments from ${targetLockboxTable} joined with bc_basemoneyreceived, bc_policyperiod (showing policy number), bc_invoice (showing invoice number), and bc_account.`;
+    } else if (wantsPolicy) {
+      explanation = `Retrieves lockbox remittance batch payments from ${targetLockboxTable} joined with bc_basemoneyreceived, bc_policyperiod (showing policy number), and bc_account.`;
+    } else if (wantsInvoice) {
+      explanation = `Retrieves lockbox remittance batch payments from ${targetLockboxTable} joined with bc_basemoneyreceived, bc_invoice (showing invoice number), and bc_account.`;
+    }
 
     return {
-      sql: `SELECT 
-  l.externalpaymentreference,
-  l.controlcode,
-  l.sequencenumber,
-  l.boacoupontype,
-  l.amountpaid,
-  l.amountdue,
-  l.refnumberinternal,
-  l.createtime AS batch_processed_time,
-  b.refnumber AS payment_ref,
-  a.accountname,
-  a.accountnumber
-FROM ${targetLockboxTable} l
-LEFT JOIN bc_basemoneyreceived b ON (l.moneyreceived = b.id OR l.moneyreceived_id = b.id)
-LEFT JOIN bc_account a ON (b.accountid = a.id OR b.account_id = a.id)
-ORDER BY l.createtime DESC
-LIMIT ${limit};`,
-      explanation: `Retrieves payments received from the remittance lockbox batch process using custom table ${targetLockboxTable} joined with bc_basemoneyreceived and bc_account. Protected fields are automatically sanitized.`,
+      sql: `SELECT \n${formattedSelect}\n${formattedJoins}\nORDER BY l.createtime DESC\nLIMIT ${limit};`,
+      explanation,
       confidence: 'high',
       insufficientInfo: null,
       suggestedChartType: 'table'

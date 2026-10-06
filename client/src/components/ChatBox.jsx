@@ -20,8 +20,10 @@ export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, ins
       onSubmit(null, 'NO_SUITE_SELECTED');
       return;
     }
-    if (!input.trim() || isLoading) return;
-    const text = input.trim();
+    const raw = input.trim();
+    if (!raw || isLoading) return;
+    // Strip accidental leading/trailing single or double quotes
+    const text = raw.replace(/^['"]+|['"]+$/g, '').trim();
     onSubmit(text);
   };
 
