@@ -670,6 +670,81 @@ function generateTwiaBillingData() {
     { id: 5, publicid: 'bc:plan:7005', accountid: 5, paymentplanid: 101, currency: 'USD' }
   ];
 
+  const lockboxLineItems = [
+    {
+      id: 1,
+      publicid: 'bcx:lbx:101',
+      externalpaymentreference: 'LBX-REM-90011',
+      controlcode: 'CTRL-BOA-801',
+      sequencenumber: 'SEQ-001',
+      boacoupontype: 'Standard Coupon',
+      boarmr: true,
+      amountpaid: 4850.00,
+      amountdue: 4850.00,
+      moneyreceived: 1,
+      paymentmethod: 1,
+      refnumberinternal: 'REF-TX-8821',
+      refnumberoverride: null,
+      sourcesystem: 1,
+      createtime: '2026-09-01 10:14:00',
+      updatetime: '2026-09-01 10:14:00'
+    },
+    {
+      id: 2,
+      publicid: 'bcx:lbx:102',
+      externalpaymentreference: 'LBX-REM-90012',
+      controlcode: 'CTRL-BOA-802',
+      sequencenumber: 'SEQ-002',
+      boacoupontype: 'Scanline Remittance',
+      boarmr: true,
+      amountpaid: 3200.00,
+      amountdue: 3200.00,
+      moneyreceived: 2,
+      paymentmethod: 1,
+      refnumberinternal: 'REF-TX-8822',
+      refnumberoverride: null,
+      sourcesystem: 1,
+      createtime: '2026-09-05 11:30:00',
+      updatetime: '2026-09-05 11:30:00'
+    },
+    {
+      id: 3,
+      publicid: 'bcx:lbx:103',
+      externalpaymentreference: 'LBX-REM-90013',
+      controlcode: 'CTRL-BOA-803',
+      sequencenumber: 'SEQ-003',
+      boacoupontype: 'Standard Coupon',
+      boarmr: true,
+      amountpaid: 1250.00,
+      amountdue: 1250.00,
+      moneyreceived: 3,
+      paymentmethod: 1,
+      refnumberinternal: 'REF-TX-8823',
+      refnumberoverride: null,
+      sourcesystem: 1,
+      createtime: '2026-09-12 14:00:00',
+      updatetime: '2026-09-12 14:00:00'
+    },
+    {
+      id: 4,
+      publicid: 'bcx:lbx:104',
+      externalpaymentreference: 'LBX-REM-90014',
+      controlcode: 'CTRL-BOA-804',
+      sequencenumber: 'SEQ-004',
+      boacoupontype: 'Direct Remittance Check',
+      boarmr: true,
+      amountpaid: 6500.00,
+      amountdue: 6500.00,
+      moneyreceived: 4,
+      paymentmethod: 1,
+      refnumberinternal: 'REF-TX-8824',
+      refnumberoverride: null,
+      sourcesystem: 1,
+      createtime: '2026-09-20 16:45:00',
+      updatetime: '2026-09-20 16:45:00'
+    }
+  ];
+
   // Populate cross-compatible aliases so standard SQL and Guidewire queries both succeed
   accounts.forEach(a => {
     a.policy_id = a.id;
@@ -705,7 +780,9 @@ function generateTwiaBillingData() {
     bc_basemoneyreceived: moneyReceived,
     bc_policyperiod: policyPeriods,
     bc_producer: producers,
-    bc_accountpaymentplan: paymentPlans
+    bc_accountpaymentplan: paymentPlans,
+    bcx_lockboxlineitem_ext: lockboxLineItems,
+    bc_lockboxlineitem_ext: lockboxLineItems
   };
 }
 

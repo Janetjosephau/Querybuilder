@@ -279,6 +279,41 @@ LIMIT ${limit};`,
     };
   }
 
+  // 0.3 Lockbox & Remittance Batch Process Queries (bcx_lockboxlineitem_ext / bc_lockboxlineitem_ext)
+  const isLockboxQuery = (
+    p.includes('lockbox') || p.includes('remittance') || p.includes('lockboxlineitem') ||
+    (p.includes('batch') && (p.includes('payment') || p.includes('remit') || p.includes('money') || p.includes('received')))
+  );
+
+  if (isLockboxQuery) {
+    const isImported = schema?.mode === 'imported';
+    const targetLockboxTable = isImported ? 'bcx_lockboxlineitem_ext' : 'bc_lockboxlineitem_ext';
+
+    return {
+      sql: `SELECT 
+  l.externalpaymentreference,
+  l.controlcode,
+  l.sequencenumber,
+  l.boacoupontype,
+  l.amountpaid,
+  l.amountdue,
+  l.refnumberinternal,
+  l.createtime AS batch_processed_time,
+  b.refnumber AS payment_ref,
+  a.accountname,
+  a.accountnumber
+FROM ${targetLockboxTable} l
+LEFT JOIN bc_basemoneyreceived b ON (l.moneyreceived = b.id OR l.moneyreceived_id = b.id)
+LEFT JOIN bc_account a ON (b.accountid = a.id OR b.account_id = a.id)
+ORDER BY l.createtime DESC
+LIMIT ${limit};`,
+      explanation: `Retrieves payments received from the remittance lockbox batch process using custom table ${targetLockboxTable} joined with bc_basemoneyreceived and bc_account. Protected fields are automatically sanitized.`,
+      confidence: 'high',
+      insufficientInfo: null,
+      suggestedChartType: 'table'
+    };
+  }
+
   // Direct Table Queries (e.g. "top 10 from pc_policy", "show cc_claim table", etc.)
   const tableMap = [
     { table: 'bc_account', triggers: ['bc_account', 'bc account', 'billing account', 'account', 'accounts'] },
@@ -289,6 +324,7 @@ LIMIT ${limit};`,
     { table: 'bc_producer', triggers: ['bc_producer', 'bc producer', 'producer', 'producers', 'agency', 'broker'] },
     { table: 'bc_accountpaymentplan', triggers: ['bc_accountpaymentplan', 'account payment plan', 'payment plan', 'payment plans'] },
     { table: 'bc_charge', triggers: ['bc_charge', 'bc charge', 'charge', 'charges'] },
+    { table: 'bcx_lockboxlineitem_ext', triggers: ['bcx_lockboxlineitem_ext', 'bc_lockboxlineitem_ext', 'lockboxlineitem_ext', 'lockbox table'] },
     { table: 'pc_policyperiod', triggers: ['pc_policyperiod', 'policyperiod', 'policy period'] },
     { table: 'pc_policy', triggers: ['pc_policy', 'pc policy', 'policies', 'policy'] },
     { table: 'pc_coverage', triggers: ['pc_coverage', 'pc coverage', 'coverage'] },
@@ -299,7 +335,7 @@ LIMIT ${limit};`,
   ];
 
   // Only use generic table dump if prompt does NOT contain specific filter conditions
-  const hasFilterCondition = /\b(start|starts|starting|where|like|contain|contains|named|called|greater|less|above|below|status|past due|paid|due)\b/i.test(p);
+  const hasFilterCondition = /\b(start|starts|starting|where|like|contain|contains|named|called|greater|less|above|below|status|past due|paid|due|lockbox|remittance|batch)\b/i.test(p);
   if (!hasFilterCondition) {
     for (const item of tableMap) {
       for (const trig of item.triggers) {
@@ -595,7 +631,7 @@ LIMIT ${limit};`,
     p.includes('payment method') ||
     p.includes('settled amount') ||
     p.includes('by method') ||
-    (p.includes('payment') && (p.includes('ach') || p.includes('credit card') || p.includes('lockbox') || p.includes('methods') || p.includes('breakdown') || p.includes('distribution') || p.includes('summary')))
+    (p.includes('payment') && (p.includes('ach') || p.includes('credit card') || p.includes('methods') || p.includes('breakdown') || p.includes('distribution') || p.includes('summary')))
   );
 
   if (isPaymentMethodAggregation) {

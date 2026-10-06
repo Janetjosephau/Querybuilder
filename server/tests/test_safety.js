@@ -143,6 +143,25 @@ runTest('Positive: verifySqlAgainstCatalog supports schema-qualified tables (e.g
   assert.strictEqual(res.isValid, true);
 });
 
+runTest('Positive: Custom table lockbox batch payments query in TWIA mode', () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery('show lockbox payments received from remittance batch process', { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('bcx_lockboxlineitem_ext') || res.sql.includes('bc_lockboxlineitem_ext'));
+  assert.ok(res.sql.includes('amountpaid'));
+});
+
+runTest('Positive: Anti-Hallucination validates custom extension tables (bcx_lockboxlineitem_ext, *_ext)', () => {
+  const schema = {
+    tables: [
+      { name: 'bc_account', columns: [{ name: 'id' }, { name: 'accountnumber' }] },
+      { name: 'bcx_lockboxlineitem_ext', columns: [{ name: 'id' }, { name: 'amountpaid' }] }
+    ]
+  };
+  const res = verifySqlAgainstCatalog('SELECT * FROM bcx_lockboxlineitem_ext', schema);
+  assert.strictEqual(res.isValid, true);
+});
+
 console.log(`\nTEST RESULTS: ${passed}/${total} PASSED`);
 if (passed !== total) {
   process.exit(1);

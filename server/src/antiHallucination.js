@@ -53,8 +53,8 @@ function verifySqlAgainstCatalog(sql, schema) {
   }
 
   const validTableNames = new Set(schema.tables.map(t => t.name.toLowerCase()));
-  // Also recognize core alias tables
-  ['bc_payment', 'bc_basemoneyreceived', 'bc_account', 'bc_invoice', 'bc_policyperiod'].forEach(t => validTableNames.add(t));
+  // Also recognize core alias tables and custom build extensions
+  ['bc_payment', 'bc_basemoneyreceived', 'bc_account', 'bc_invoice', 'bc_policyperiod', 'bc_lockboxlineitem_ext', 'bcx_lockboxlineitem_ext', 'bcst_lockboxlineitem_ext'].forEach(t => validTableNames.add(t));
 
   const cleanSql = sql.toLowerCase();
 
@@ -144,6 +144,18 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     // Core Guidewire BillingCenter & PolicyCenter anchor tables
     if (['bc_account', 'bc_invoice', 'bc_payment', 'bc_policyperiod', 'bc_basemoneyreceived', 'bc_accountpaymentplan', 'bc_producer', 'pc_policy', 'pc_policyperiod'].includes(tName)) {
       score += 5;
+    }
+
+    // Custom enterprise extension tables priority (*_ext, bcx_*, pcx_*, ccx_*)
+    // Guidewire custom builds store critical organization-specific data (e.g. remittance batch feeds) in _ext tables
+    if (tName.endsWith('_ext') || tName.startsWith('bcx_') || tName.startsWith('pcx_') || tName.startsWith('ccx_')) {
+      score += 8;
+    }
+
+    // Lockbox, Remittance, & Batch Payment Process targeting
+    if (pLower.includes('lockbox') || pLower.includes('remittance') || pLower.includes('batch payment') || pLower.includes('batch process') || pLower.includes('lockboxlineitem') || pLower.includes('batch')) {
+      if (tName.includes('lockbox') || tName.includes('lineitem')) score += 40;
+      if (tName.includes('money') || tName.includes('payment') || tName.includes('basemoneyreceived')) score += 15;
     }
 
     // Explicit suite targeting boosts from prompt text
