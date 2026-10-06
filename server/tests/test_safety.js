@@ -174,8 +174,25 @@ runTest('Positive: Anti-Hallucination validates custom extension tables (bcx_loc
   assert.strictEqual(res.isValid, true);
 });
 
+runTest('Positive: All 1,296 Guidewire tables have 3 synthetic records queryable in database', async () => {
+  db.switchToImported();
+  // Test arbitrary staging table
+  const stagingRes = await db.executeQuery('SELECT * FROM bcst_account');
+  assert.strictEqual(stagingRes.rowCount, 3);
+  assert.ok(stagingRes.rows[0].accountnumber);
+
+  // Test arbitrary typelist table
+  const typelistRes = await db.executeQuery('SELECT * FROM bctl_accounttype');
+  assert.strictEqual(typelistRes.rowCount, 3);
+
+  // Test custom extension table
+  const customRes = await db.executeQuery('SELECT * FROM bcx_lockboxlineitem_ext');
+  assert.ok(customRes.rowCount >= 3);
+});
+
 console.log(`\nTEST RESULTS: ${passed}/${total} PASSED`);
 if (passed !== total) {
   process.exit(1);
 }
+
 

@@ -8,8 +8,10 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 const alasql = require('alasql');
+alasql.options.casesensitive = false;
 const { generateGuidewireData } = require('./guidewireSeed');
 const { generateTwiaBillingData } = require('./twiaSeed');
+const { generateAllTablesSyntheticData } = require('./allTablesSeed');
 const { applyDataMasking, classifyColumn } = require('./masking');
 const { validateSqlSafety } = require('./safety');
 
@@ -31,39 +33,41 @@ if (fs.existsSync(importedSchemaPath)) {
 
 // Initialize in-memory TWIA BillingCenter Database
 function initTwiaBillingDatabase() {
-  const data = generateTwiaBillingData();
-  for (const tableName of Object.keys(data)) {
-    try {
-      alasql(`DROP TABLE IF EXISTS ${tableName}`);
-    } catch (e) {}
-    alasql(`CREATE TABLE ${tableName}`);
-    alasql.tables[tableName].data = [...data[tableName]];
+  const curatedData = generateTwiaBillingData();
+  
+  // Generate 3 synthetic rows for all 1,296 tables in importedSchema.json
+  // Preserving curated data for operational tables (bc_account, bc_invoice, bc_basemoneyreceived, etc.)
+  const allData = generateAllTablesSyntheticData(importedSchema, curatedData);
+
+  for (const tableName of Object.keys(allData)) {
+    alasql.tables[tableName] = { data: [...allData[tableName]] };
   }
 
   // Create bc_payment compatibility table pointing to bc_basemoneyreceived
-  try {
-    alasql(`DROP TABLE IF EXISTS bc_payment`);
-  } catch (e) {}
-  alasql(`CREATE TABLE bc_payment`);
-  alasql.tables['bc_payment'].data = data.bc_basemoneyreceived.map(m => ({
-    id: m.id,
-    publicid: m.publicid,
-    accountid: m.accountid,
-    account_id: m.accountid,
-    invoiceid: m.invoiceid,
-    invoice_id: m.invoiceid,
-    policyperiodid: m.policyperiodid,
-    policyperiod_id: m.policyperiodid,
-    amount: m.amount,
-    currency: m.currency,
-    receiveddate: m.receiveddate,
-    paymentdate: m.receiveddate,
-    refnumber: m.refnumber,
-    description: m.description,
-    paymentmethod: (m.paymentinstrumentid === 3 || m.paymentinstrumentid === 5) ? 'Credit Card' : 'ACH'
-  }));
+  const moneyReceived = allData.bc_basemoneyreceived || [];
+  alasql.tables['bc_payment'] = {
+    data: moneyReceived.map(m => ({
+      id: m.id,
+      publicid: m.publicid,
+      accountid: m.accountid,
+      account_id: m.accountid,
+      invoiceid: m.invoiceid,
+      invoice_id: m.invoiceid,
+      policyperiodid: m.policyperiodid,
+      policyperiod_id: m.policyperiodid,
+      amount: m.amount,
+      currency: m.currency,
+      receiveddate: m.receiveddate,
+      paymentdate: m.receiveddate,
+      refnumber: m.refnumber,
+      description: m.description,
+      paymentmethod: (m.paymentinstrumentid === 3 || m.paymentinstrumentid === 5) ? 'Credit Card' : 'ACH'
+    }))
+  };
 
-  console.log('[DB] TWIA BillingCenter Synthetic Data seeded successfully for key tables.');
+  const totalTableCount = Object.keys(allData).length;
+  const totalRowCount = Object.values(allData).reduce((sum, r) => sum + r.length, 0);
+  console.log(`[DB] TWIA BillingCenter synthetic data initialized: ${totalTableCount} tables, ${totalRowCount} rows (3 records/table).`);
 }
 
 // Initialize in-memory Demo Database
