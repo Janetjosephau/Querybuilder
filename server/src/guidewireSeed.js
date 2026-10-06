@@ -167,6 +167,12 @@ function generateGuidewireData() {
     p.receiveddate = p.paymentdate;
   });
 
+  const histories = [
+    { id: 1, publicid: 'hist:1001', eventtimestamp: '2024-08-10 14:30:00', eventdate: '2024-08-10', eventtype: 1, description: 'Policy POL-COM-2008 bound and activated', accountid: 1, refnumber: 'EVT-2024-01' },
+    { id: 2, publicid: 'hist:1002', eventtimestamp: '2024-08-12 09:15:00', eventdate: '2024-08-12', eventtype: 2, description: 'Invoice INV-2024-001 generated for account BC-1001', accountid: 1, refnumber: 'EVT-2024-02' },
+    { id: 3, publicid: 'hist:1003', eventtimestamp: '2024-08-15 16:45:00', eventdate: '2024-08-15', eventtype: 3, description: 'Lockbox payment received and settled via ACH', accountid: 2, refnumber: 'EVT-2024-03' }
+  ];
+
   return {
     pc_policy: policies,
     pc_policyperiod: policyperiods,
@@ -176,6 +182,7 @@ function generateGuidewireData() {
     bc_invoice: invoices,
     bc_payment: payments,
     bc_basemoneyreceived: payments,
+    bc_history: histories,
     cc_claim: claims,
     cc_claimant: claimants,
     cc_exposure: exposures,

@@ -54,7 +54,11 @@ function verifySqlAgainstCatalog(sql, schema) {
 
   const validTableNames = new Set(schema.tables.map(t => t.name.toLowerCase()));
   // Also recognize core alias tables and custom build extensions
-  ['bc_payment', 'bc_basemoneyreceived', 'bc_account', 'bc_invoice', 'bc_policyperiod', 'bc_lockboxlineitem_ext', 'bcx_lockboxlineitem_ext', 'bcst_lockboxlineitem_ext'].forEach(t => validTableNames.add(t));
+  [
+    'bc_payment', 'bc_basemoneyreceived', 'bc_account', 'bc_invoice', 'bc_policyperiod',
+    'bc_history', 'bctl_historyeventtype', 'bctl_historytype', 'pc_history', 'cc_history',
+    'bc_lockboxlineitem_ext', 'bcx_lockboxlineitem_ext', 'bcst_lockboxlineitem_ext'
+  ].forEach(t => validTableNames.add(t));
 
   const cleanSql = sql.toLowerCase();
 
@@ -112,7 +116,7 @@ function isCcTable(name) {
 }
 
 function selectRelevantTables(tables, prompt = '', suite = null) {
-  if (!tables || tables.length <= 12) return tables || [];
+  if (!tables || tables.length === 0) return [];
 
   const pLower = (prompt || '').toLowerCase();
   const suiteLower = (suite || '').toLowerCase();
@@ -132,8 +136,23 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     if (suiteLower === 'pc' && (isBcTable(tName) || isCcTable(tName))) score -= 30;
     if (suiteLower === 'cc' && (isBcTable(tName) || isPcTable(tName))) score -= 30;
 
+    // Test tables penalty: tables ending in 'test' or containing '_test_' (e.g. bc_appeventstest, bcst_appeventstest)
+    // should NEVER be selected for business queries unless user explicitly asks for 'test'
+    // Note: Use word boundary so words like 'latest' or 'greatest' do not falsely trigger
+    const isTestTable = tName.endsWith('test') || tName.includes('_test_') || tName.startsWith('test_');
+    const userWantsTest = /\b(?:test|tests|testing)\b/i.test(pLower);
+    if (isTestTable && !userWantsTest) {
+      score -= 100;
+    }
+
     // Direct table name hit
     if (promptWords.some(w => tName === w || tName.includes(w))) score += 15;
+
+    // Exact concept match without suite prefix: e.g. "bc_history" -> "history"
+    const conceptName = tName.replace(/^(?:bc|pc|cc)(?:st|tl|x)?_/, '');
+    if (promptWords.includes(conceptName)) {
+      score += 35;
+    }
     
     // Core insurance domain keyword mappings
     if ((promptWords.includes('policy') || promptWords.includes('policies') || promptWords.includes('expired')) && tName.includes('policy')) score += 12;
@@ -141,9 +160,23 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     if ((promptWords.includes('account') || promptWords.includes('accounts')) && tName.includes('account')) score += 12;
     if ((promptWords.includes('payment') || promptWords.includes('paid')) && (tName.includes('payment') || tName.includes('money'))) score += 12;
 
+    // History, Audit & Event queries:
+    // Guidewire maintains the authoritative audit event history in bc_history (BillingCenter), pc_history (PolicyCenter), cc_history (ClaimCenter)
+    if (pLower.includes('history') || pLower.includes('audit') || (pLower.includes('event') && !pLower.includes('sync'))) {
+      if (tName === 'bc_history' || tName === 'pc_history' || tName === 'cc_history') {
+        score += 60;
+      } else if (tName === 'bctl_historyeventtype' || tName === 'bctl_historytype' || tName === 'bctl_history') {
+        score += 25;
+      }
+    }
+
     // Core Guidewire BillingCenter & PolicyCenter anchor tables
-    if (['bc_account', 'bc_invoice', 'bc_payment', 'bc_policyperiod', 'bc_basemoneyreceived', 'bc_accountpaymentplan', 'bc_producer', 'pc_policy', 'pc_policyperiod'].includes(tName)) {
-      score += 5;
+    if ([
+      'bc_account', 'bc_invoice', 'bc_payment', 'bc_policyperiod', 'bc_basemoneyreceived',
+      'bc_accountpaymentplan', 'bc_producer', 'bc_history', 'pc_policy', 'pc_policyperiod',
+      'pc_history', 'cc_claim', 'cc_history'
+    ].includes(tName)) {
+      score += 10;
     }
 
     // Custom enterprise extension tables priority (*_ext, bcx_*, pcx_*, ccx_*)
@@ -178,9 +211,13 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
   });
 
   scored.sort((a, b) => b.score - a.score);
-  // Keep only the top 10 most relevant tables to maintain fast token ingestion on CPU
-  const topTables = scored.filter(s => s.score > 0).slice(0, 10).map(s => s.table);
-  return topTables.length > 0 ? topTables : scored.slice(0, 6).map(s => s.table);
+  // Keep only non-penalized relevant tables to maintain fast token ingestion on CPU
+  const nonPenalized = scored.filter(s => s.score >= 0);
+  const positiveScored = nonPenalized.filter(s => s.score > 0);
+  if (positiveScored.length > 0) {
+    return positiveScored.slice(0, 10).map(s => s.table);
+  }
+  return nonPenalized.slice(0, 6).map(s => s.table);
 }
 
 /**

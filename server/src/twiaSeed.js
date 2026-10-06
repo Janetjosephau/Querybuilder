@@ -767,10 +767,63 @@ function generateTwiaBillingData() {
     m.paymentdate = m.receiveddate;
   });
 
-  policyPeriods.forEach(pp => {
-    pp.account_id = pp.accountid;
-    pp.policy_id = pp.id;
-  });
+  const historyEventTypes = [
+    { id: 1, typecode: 'payment_received', name: 'Payment Received', description: 'Payment received and applied to billing ledger', retired: false },
+    { id: 2, typecode: 'invoice_issued', name: 'Invoice Issued', description: 'Monthly billing installment invoice generated', retired: false },
+    { id: 3, typecode: 'lockbox_remittance', name: 'Remittance Batch Processed', description: 'Lockbox payment batch processed and reconciled', retired: false },
+    { id: 4, typecode: 'policy_bound', name: 'Policy Period Bound', description: 'New policy term bound and billing account activated', retired: false }
+  ];
+
+  const histories = [
+    {
+      id: 1,
+      publicid: 'bc:hist:1001',
+      eventtimestamp: '2026-09-10 09:30:00',
+      eventdate: '2026-09-10 09:30:00',
+      eventtype: 4,
+      type: 1,
+      customtype: 1,
+      description: 'Policy TWIA-POL-1001 bound and billing schedule initialized for Galveston Coastal Resort LLC',
+      accountid: 1,
+      policyperiodid: 1,
+      producerid: 1,
+      refnumber: 'EVT-TX-2026-01',
+      amountext: 2450.00,
+      countsasactivity: true
+    },
+    {
+      id: 2,
+      publicid: 'bc:hist:1002',
+      eventtimestamp: '2026-09-15 14:15:00',
+      eventdate: '2026-09-15 14:15:00',
+      eventtype: 2,
+      type: 2,
+      customtype: 1,
+      description: 'Invoice INV-TWIA-2026-001 issued for amount $2,450.00 due on 2026-10-15',
+      accountid: 1,
+      policyperiodid: 1,
+      producerid: 1,
+      refnumber: 'EVT-TX-2026-02',
+      amountext: 2450.00,
+      countsasactivity: true
+    },
+    {
+      id: 3,
+      publicid: 'bc:hist:1003',
+      eventtimestamp: '2026-09-20 16:45:00',
+      eventdate: '2026-09-20 16:45:00',
+      eventtype: 3,
+      type: 3,
+      customtype: 1,
+      description: 'Lockbox remittance payment received from Bank of America batch scanline for policy TWIA-POL-1002',
+      accountid: 2,
+      policyperiodid: 2,
+      producerid: 2,
+      refnumber: 'REF-TX-8822',
+      amountext: 1890.00,
+      countsasactivity: true
+    }
+  ];
 
   return {
     bc_account: accounts,
@@ -782,7 +835,9 @@ function generateTwiaBillingData() {
     bc_producer: producers,
     bc_accountpaymentplan: paymentPlans,
     bcx_lockboxlineitem_ext: lockboxLineItems,
-    bc_lockboxlineitem_ext: lockboxLineItems
+    bc_lockboxlineitem_ext: lockboxLineItems,
+    bc_history: histories,
+    bctl_historyeventtype: historyEventTypes
   };
 }
 

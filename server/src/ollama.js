@@ -279,6 +279,68 @@ LIMIT ${limit};`,
     };
   }
 
+  // 0.25 History & Audit Event Queries (e.g. "latest added history event", "history events", "show history", "recent history events", "audit events")
+  const isHistoryQuery = (
+    p.includes('history') ||
+    p.includes('audit trail') ||
+    p.includes('audit log') ||
+    (p.includes('event') && (p.includes('latest') || p.includes('recent') || p.includes('added') || p.includes('last') || p.includes('history') || p.includes('log')))
+  ) && !p.includes('lockbox') && !p.includes('appeventsgraph');
+
+  if (isHistoryQuery) {
+    let histLimit = limit;
+    if (!limitMatch && (p.includes('latest') || p.includes('last') || p.includes('most recent') || p.includes('latest added') || p.includes('newest'))) {
+      histLimit = 1;
+    }
+
+    const isImported = schema?.mode === 'imported';
+    if (isImported) {
+      return {
+        sql: `SELECT 
+  h.id,
+  h.publicid,
+  h.eventtimestamp,
+  h.eventdate,
+  het.name AS event_type,
+  h.description,
+  a.accountnumber,
+  a.accountname,
+  h.refnumber,
+  h.amountext
+FROM bc_history h
+LEFT JOIN bctl_historyeventtype het ON h.eventtype = het.id
+LEFT JOIN bc_account a ON h.accountid = a.id
+ORDER BY h.eventtimestamp DESC
+LIMIT ${histLimit};`,
+        explanation: `Retrieves the ${histLimit === 1 ? 'latest added history event' : 'history events'} from Guidewire BillingCenter history table (bc_history) joined with event type from bctl_historyeventtype and account details from bc_account, ordered chronologically by event timestamp.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    } else {
+      return {
+        sql: `SELECT 
+  h.id,
+  h.publicid,
+  h.eventtimestamp,
+  h.eventdate,
+  h.eventtype,
+  h.description,
+  a.accountnumber,
+  a.accountname,
+  h.refnumber
+FROM bc_history h
+LEFT JOIN bc_account a ON h.accountid = a.id
+ORDER BY h.eventtimestamp DESC
+LIMIT ${histLimit};`,
+        explanation: `Retrieves the ${histLimit === 1 ? 'latest added history event' : 'history events'} from Guidewire BillingCenter history table (bc_history) joined with account details from bc_account, ordered chronologically by event timestamp.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
+  }
+
   // 0.3 Lockbox & Remittance Batch Process Queries (bcx_lockboxlineitem_ext / bc_lockboxlineitem_ext)
   const isLockboxQuery = (
     p.includes('lockbox') || p.includes('remittance') || p.includes('lockboxlineitem') ||
@@ -356,6 +418,7 @@ LIMIT ${limit};`,
     { table: 'bc_accountpaymentplan', triggers: ['bc_accountpaymentplan', 'account payment plan', 'payment plan', 'payment plans'] },
     { table: 'bc_charge', triggers: ['bc_charge', 'bc charge', 'charge', 'charges'] },
     { table: 'bcx_lockboxlineitem_ext', triggers: ['bcx_lockboxlineitem_ext', 'bc_lockboxlineitem_ext', 'lockboxlineitem_ext', 'lockbox table'] },
+    { table: 'bc_history', triggers: ['bc_history', 'history table', 'history events', 'audit history', 'history event', 'history'] },
     { table: 'pc_policyperiod', triggers: ['pc_policyperiod', 'policyperiod', 'policy period'] },
     { table: 'pc_policy', triggers: ['pc_policy', 'pc policy', 'policies', 'policy'] },
     { table: 'pc_coverage', triggers: ['pc_coverage', 'pc coverage', 'coverage'] },
@@ -366,7 +429,7 @@ LIMIT ${limit};`,
   ];
 
   // Only use generic table dump if prompt does NOT contain specific filter conditions
-  const hasFilterCondition = /\b(start|starts|starting|where|like|contain|contains|named|called|greater|less|above|below|status|past due|paid|due|lockbox|remittance|batch)\b/i.test(p);
+  const hasFilterCondition = /\b(start|starts|starting|where|like|contain|contains|named|called|greater|less|above|below|status|past due|paid|due|lockbox|remittance|batch|history|event)\b/i.test(p);
   if (!hasFilterCondition) {
     for (const item of tableMap) {
       for (const trig of item.triggers) {

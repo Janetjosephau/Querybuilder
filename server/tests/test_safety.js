@@ -190,9 +190,38 @@ runTest('Positive: All 1,296 Guidewire tables have 3 synthetic records queryable
   assert.ok(customRes.rowCount >= 3);
 });
 
+runTest('Positive: "latest added history event" queries bc_history and excludes test tables (bc_appeventstest)', async () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery('latest added history event', { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('bc_history'), 'Query must target bc_history');
+  assert.strictEqual(res.sql.includes('bc_appeventstest'), false, 'Query must NOT target bc_appeventstest');
+  assert.ok(res.sql.includes('ORDER BY') && res.sql.includes('DESC'));
+  assert.ok(res.sql.includes('LIMIT 1'));
+
+  const execRes = await db.executeQuery(res.sql);
+  assert.strictEqual(execRes.rowCount, 1);
+  assert.ok(execRes.rows[0].description);
+});
+
+runTest('Positive: selectRelevantTables ranks bc_history above bc_appeventstest for history queries', () => {
+  const schema = {
+    tables: [
+      { name: 'bc_appeventstest', columns: [{ name: 'id' }, { name: 'updatetime' }] },
+      { name: 'bc_history', columns: [{ name: 'id' }, { name: 'eventtimestamp' }, { name: 'description' }] },
+      { name: 'bc_account', columns: [{ name: 'id' }, { name: 'accountnumber' }] }
+    ]
+  };
+  const { buildAntiHallucinationSystemPrompt } = require('../src/antiHallucination');
+  const prompt = buildAntiHallucinationSystemPrompt(schema, 'latest added history event', 'bc');
+  assert.ok(prompt.includes('bc_history'));
+  assert.strictEqual(prompt.includes('bc_appeventstest'), false, 'bc_appeventstest must be penalized and omitted');
+});
+
 console.log(`\nTEST RESULTS: ${passed}/${total} PASSED`);
 if (passed !== total) {
   process.exit(1);
 }
+
 
 
