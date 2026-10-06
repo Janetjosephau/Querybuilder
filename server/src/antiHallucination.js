@@ -121,6 +121,17 @@ function selectRelevantTables(tables, prompt = '') {
       score += 5;
     }
 
+    // Explicit suite targeting boosts (e.g. "BillingCenter", "in BC", "PolicyCenter", etc.)
+    if ((pLower.includes('billing') || pLower.includes('bc_') || pLower.includes('billingcenter')) && tName.startsWith('bc_')) {
+      score += 25;
+    }
+    if ((pLower.includes('policycenter') || pLower.includes('pc_')) && tName.startsWith('pc_')) {
+      score += 25;
+    }
+    if ((pLower.includes('claim') || pLower.includes('cc_') || pLower.includes('claimcenter')) && tName.startsWith('cc_')) {
+      score += 25;
+    }
+
     for (const col of t.columns) {
       const cName = col.name.toLowerCase();
       if (promptWords.includes(cName)) score += 3;

@@ -4,6 +4,7 @@
  */
 
 const http = require('http');
+const os = require('os');
 const { buildAntiHallucinationSystemPrompt, verifySqlAgainstCatalog, checkInformationSufficiency } = require('./antiHallucination');
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || '127.0.0.1';
@@ -744,14 +745,20 @@ async function generateSql(prompt, schema) {
 
   const systemPrompt = buildAntiHallucinationSystemPrompt(schema, prompt);
 
+  // Calculate optimal CPU threads: use total logical cores minus 2 for system responsiveness (min 4)
+  const totalCores = (os.cpus() && os.cpus().length) || 4;
+  const optimalThreads = Math.max(4, totalCores - 2);
+
   const requestPayload = {
     model: selectedModel,
     prompt: `${systemPrompt}\n\nUSER QUESTION: "${prompt}"\n\nGenerate the JSON response:`,
     format: 'json',
     stream: false,
+    keep_alive: '24h', // Keep model pinned in 64GB RAM for 24 hours
     options: {
       temperature: 0.1, // Low temperature for deterministic, accurate SQL
-      num_predict: 250  // Limit token output to speed up decoding
+      num_predict: 250,  // Limit token output to speed up decoding
+      num_thread: optimalThreads // Maximize CPU multi-core performance
     }
   };
 
