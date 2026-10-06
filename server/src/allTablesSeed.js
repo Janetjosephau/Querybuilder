@@ -129,20 +129,38 @@ function generateRowForTable(table, rowIndex) {
   return row;
 }
 
+const emptyTablesPath = path.join(__dirname, 'emptyTables.json');
+let emptyTablesSet = new Set();
+if (fs.existsSync(emptyTablesPath)) {
+  try {
+    const list = JSON.parse(fs.readFileSync(emptyTablesPath, 'utf8'));
+    emptyTablesSet = new Set(list.map(t => t.toLowerCase()));
+  } catch (e) {
+    console.error('[Seed] Error reading emptyTables.json:', e.message);
+  }
+}
+
 /**
- * Generate 3 synthetic rows for all 1,296 tables in importedSchema.json
+ * Generate synthetic rows for tables in importedSchema.json
+ * Skips 559 tables identified as having 0 rows in live database
  * @param {Object} schema - The imported schema object
  * @param {Object} [curatedData] - Existing curated data for key tables to preserve
- * @returns {Object} Map of tableName -> Array of 3 rows
+ * @returns {Object} Map of tableName -> Array of rows
  */
 function generateAllTablesSyntheticData(schema, curatedData = {}) {
   const result = { ...curatedData };
   const tables = schema?.tables || [];
 
   for (const table of tables) {
-    const tName = table.name;
+    const tName = table.name.toLowerCase();
     // If table already has curated data with rows, preserve it
-    if (result[tName] && result[tName].length > 0) {
+    if (result[table.name] && result[table.name].length > 0) {
+      continue;
+    }
+
+    // If table is identified as having 0 rows in live DB, leave it completely empty (0 rows)
+    if (emptyTablesSet.has(tName)) {
+      result[table.name] = [];
       continue;
     }
 
@@ -150,12 +168,13 @@ function generateAllTablesSyntheticData(schema, curatedData = {}) {
     for (let i = 0; i < 3; i++) {
       rows.push(generateRowForTable(table, i));
     }
-    result[tName] = rows;
+    result[table.name] = rows;
   }
 
   return result;
 }
 
 module.exports = {
-  generateAllTablesSyntheticData
+  generateAllTablesSyntheticData,
+  getEmptyTablesSet: () => emptyTablesSet
 };

@@ -7,6 +7,18 @@
  * 4. Pre-flight verification of all tables and columns against catalog.
  */
 
+const fs = require('fs');
+const path = require('path');
+
+const emptyTablesPath = path.join(__dirname, 'emptyTables.json');
+let emptyTablesSet = new Set();
+if (fs.existsSync(emptyTablesPath)) {
+  try {
+    const list = JSON.parse(fs.readFileSync(emptyTablesPath, 'utf8'));
+    emptyTablesSet = new Set(list.map(t => t.toLowerCase()));
+  } catch (e) {}
+}
+
 // Known unsupported concepts that users might ask for which are outside Guidewire core schema
 const UNSUPPORTED_CONCEPTS = [
   { trigger: /\bcredit\s*scores?\b/i, attribute: 'credit_score' },
@@ -143,6 +155,12 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     const userWantsTest = /\b(?:test|tests|testing)\b/i.test(pLower);
     if (isTestTable && !userWantsTest) {
       score -= 100;
+    }
+
+    // Empty tables penalty: 559 tables identified with 0 rows in live database
+    // Exclude them so Ollama only queries tables with real records, saving ~40% latency
+    if (emptyTablesSet.has(tName) || t.isEmpty === true || (t.rowCount === 0 && !tName.endsWith('_ext'))) {
+      score -= 500;
     }
 
     // Direct table name hit

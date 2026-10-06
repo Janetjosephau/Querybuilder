@@ -11,7 +11,7 @@ const alasql = require('alasql');
 alasql.options.casesensitive = false;
 const { generateGuidewireData } = require('./guidewireSeed');
 const { generateTwiaBillingData } = require('./twiaSeed');
-const { generateAllTablesSyntheticData } = require('./allTablesSeed');
+const { generateAllTablesSyntheticData, getEmptyTablesSet } = require('./allTablesSeed');
 const { applyDataMasking, classifyColumn } = require('./masking');
 const { validateSqlSafety } = require('./safety');
 
@@ -35,8 +35,9 @@ if (fs.existsSync(importedSchemaPath)) {
 function initTwiaBillingDatabase() {
   const curatedData = generateTwiaBillingData();
   
-  // Generate 3 synthetic rows for all 1,296 tables in importedSchema.json
+  // Generate synthetic rows for tables in importedSchema.json
   // Preserving curated data for operational tables (bc_account, bc_invoice, bc_basemoneyreceived, etc.)
+  // and keeping the 559 verified empty tables at 0 rows (matching live PostgreSQL DB)
   const allData = generateAllTablesSyntheticData(importedSchema, curatedData);
 
   for (const tableName of Object.keys(allData)) {
@@ -66,8 +67,10 @@ function initTwiaBillingDatabase() {
   };
 
   const totalTableCount = Object.keys(allData).length;
+  const emptyCount = Object.values(allData).filter(r => r.length === 0).length;
+  const activeCount = totalTableCount - emptyCount;
   const totalRowCount = Object.values(allData).reduce((sum, r) => sum + r.length, 0);
-  console.log(`[DB] TWIA BillingCenter synthetic data initialized: ${totalTableCount} tables, ${totalRowCount} rows (3 records/table).`);
+  console.log(`[DB] TWIA BillingCenter database initialized: ${totalTableCount} tables (${activeCount} active with data, ${emptyCount} empty with 0 rows, ${totalRowCount} total rows).`);
 }
 
 // Initialize in-memory Demo Database
@@ -158,19 +161,28 @@ function switchToImported() {
 async function getSchema() {
   // 1. Imported TWIA BillingCenter Schema
   if (currentMode === 'imported' && importedSchema) {
+    const emptySet = getEmptyTablesSet();
+    const activeCount = importedSchema.tables.filter(t => !emptySet.has(t.name.toLowerCase())).length;
     return {
       mode: 'imported',
       database: importedSchema.database || 'twia_gwcppre_qa02_bc',
       tableCount: importedSchema.tableCount,
-      tables: importedSchema.tables.map(t => ({
-        name: t.name,
-        schema: t.schema || 'public',
-        columns: t.columns.map(c => ({
-          name: c.name,
-          type: c.type,
-          isNpi: classifyColumn(c.name) !== null
-        }))
-      }))
+      activeTableCount: activeCount,
+      emptyTableCount: emptySet.size,
+      tables: importedSchema.tables.map(t => {
+        const isEmpty = emptySet.has(t.name.toLowerCase());
+        return {
+          name: t.name,
+          schema: t.schema || 'public',
+          isEmpty,
+          rowCount: isEmpty ? 0 : (alasql.tables[t.name]?.data?.length || 3),
+          columns: t.columns.map(c => ({
+            name: c.name,
+            type: c.type,
+            isNpi: classifyColumn(c.name) !== null
+          }))
+        };
+      })
     };
   }
 
@@ -179,23 +191,33 @@ async function getSchema() {
     try {
       const query = `
         SELECT 
-          table_schema,
-          table_name, 
-          column_name, 
-          data_type 
-        FROM information_schema.columns 
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-        ORDER BY table_schema, table_name, ordinal_position;
+          c.table_schema,
+          c.table_name, 
+          c.column_name, 
+          c.data_type,
+          COALESCE(pg_relation_size(cl.oid), 0) AS disk_bytes
+        FROM information_schema.columns c
+        LEFT JOIN pg_class cl ON cl.relname = c.table_name
+        LEFT JOIN pg_namespace n ON n.oid = cl.relnamespace AND n.nspname = c.table_schema
+        WHERE c.table_schema NOT IN ('pg_catalog', 'information_schema')
+          AND (cl.relkind = 'r' OR cl.relkind IS NULL)
+        ORDER BY c.table_schema, c.table_name, c.ordinal_position;
       `;
       const res = await pgPool.query(query);
       const tablesMap = {};
+      const emptySet = getEmptyTablesSet();
 
       for (const row of res.rows) {
         const key = row.table_schema === 'public' ? row.table_name : `${row.table_schema}.${row.table_name}`;
+        const isDiskEmpty = row.disk_bytes !== null && parseInt(row.disk_bytes, 10) === 0;
+        const isEmpty = isDiskEmpty || emptySet.has(row.table_name.toLowerCase());
+
         if (!tablesMap[key]) {
           tablesMap[key] = {
             name: row.table_name,
             schema: row.table_schema,
+            isEmpty,
+            rowCount: isEmpty ? 0 : null,
             columns: []
           };
         }
@@ -206,10 +228,17 @@ async function getSchema() {
         });
       }
 
+      const allPostgresTables = Object.values(tablesMap);
+      const activePgCount = allPostgresTables.filter(t => !t.isEmpty).length;
+      const emptyPgCount = allPostgresTables.filter(t => t.isEmpty).length;
+
       return {
         mode: 'postgres',
         database: liveDbConfig?.database || 'postgres',
-        tables: Object.values(tablesMap)
+        tableCount: allPostgresTables.length,
+        activeTableCount: activePgCount,
+        emptyTableCount: emptyPgCount,
+        tables: allPostgresTables
       };
     } catch (err) {
       console.error('[DB] Error introspecting PostgreSQL schema:', err.message);

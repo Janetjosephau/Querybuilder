@@ -174,20 +174,32 @@ runTest('Positive: Anti-Hallucination validates custom extension tables (bcx_loc
   assert.strictEqual(res.isValid, true);
 });
 
-runTest('Positive: All 1,296 Guidewire tables have 3 synthetic records queryable in database', async () => {
+runTest('Positive: 559 empty tables have 0 rows while active tables retain data', async () => {
   db.switchToImported();
-  // Test arbitrary staging table
-  const stagingRes = await db.executeQuery('SELECT * FROM bcst_account');
-  assert.strictEqual(stagingRes.rowCount, 3);
-  assert.ok(stagingRes.rows[0].accountnumber);
+  // 1. Staging table in empty list has 0 rows
+  const emptyRes = await db.executeQuery('SELECT * FROM bcst_account');
+  assert.strictEqual(emptyRes.rowCount, 0, 'bcst_account must have 0 rows');
 
-  // Test arbitrary typelist table
-  const typelistRes = await db.executeQuery('SELECT * FROM bctl_accounttype');
-  assert.strictEqual(typelistRes.rowCount, 3);
+  // 2. Active operational table has data
+  const activeRes = await db.executeQuery('SELECT * FROM bc_account');
+  assert.ok(activeRes.rowCount > 0, 'bc_account must have active rows');
 
-  // Test custom extension table
+  // 3. Custom extension table has data
   const customRes = await db.executeQuery('SELECT * FROM bcx_lockboxlineitem_ext');
   assert.ok(customRes.rowCount >= 3);
+});
+
+runTest('Positive: selectRelevantTables completely excludes 559 empty tables from Ollama prompt', () => {
+  const schema = {
+    tables: [
+      { name: 'bcst_account', columns: [{ name: 'id' }, { name: 'accountnumber' }] },
+      { name: 'bc_account', columns: [{ name: 'id' }, { name: 'accountnumber' }] }
+    ]
+  };
+  const { buildAntiHallucinationSystemPrompt } = require('../src/antiHallucination');
+  const prompt = buildAntiHallucinationSystemPrompt(schema, 'show all accounts', 'bc');
+  assert.ok(prompt.includes('bc_account'), 'Prompt must include active bc_account');
+  assert.strictEqual(prompt.includes('bcst_account'), false, 'Prompt must omit empty bcst_account');
 });
 
 runTest('Positive: "latest added history event" queries bc_history and excludes test tables (bc_appeventstest)', async () => {

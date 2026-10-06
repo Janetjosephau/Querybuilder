@@ -4,6 +4,7 @@ import { Database, ChevronDown, ChevronRight, ShieldAlert, Key, Table2, Search }
 export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) {
   const [openTables, setOpenTables] = useState({ bc_account: true, bc_invoice: true, pc_policy: true });
   const [searchFilter, setSearchFilter] = useState('');
+  const [hideEmpty, setHideEmpty] = useState(true);
 
   const toggleTable = (tblName) => {
     setOpenTables(prev => ({ ...prev, [tblName]: !prev[tblName] }));
@@ -11,12 +12,16 @@ export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) 
 
   const tables = schema?.tables || [];
 
-  // Filter tables by search query
+  // Filter tables by search query and empty table state
   const filteredTables = useMemo(() => {
-    if (!searchFilter.trim()) return tables;
+    let result = tables;
+    if (hideEmpty) {
+      result = result.filter(t => !t.isEmpty);
+    }
+    if (!searchFilter.trim()) return result;
     const q = searchFilter.toLowerCase().trim();
-    return tables.filter(t => t.name.toLowerCase().includes(q));
-  }, [tables, searchFilter]);
+    return result.filter(t => t.name.toLowerCase().includes(q));
+  }, [tables, searchFilter, hideEmpty]);
 
   const isBcTable = (name) => {
     const n = (name || '').toLowerCase();
@@ -65,6 +70,22 @@ export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) 
         </span>
       </div>
 
+      {/* Hide Empty Tables Filter Toggle */}
+      {schema?.emptyTableCount > 0 && (
+        <label className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 cursor-pointer hover:border-slate-700 transition">
+          <span className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${hideEmpty ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
+            <span>Hide 0-row tables ({schema.emptyTableCount})</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={hideEmpty}
+            onChange={(e) => setHideEmpty(e.target.checked)}
+            className="rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+          />
+        </label>
+      )}
+
       {/* Quick Table Search */}
       <div className="relative">
         <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -72,7 +93,7 @@ export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) 
           type="text"
           value={searchFilter}
           onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="Filter 1,200+ tables (e.g. account, invoice)..."
+          placeholder="Filter tables (e.g. account, invoice)..."
           className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
         />
         {searchFilter && (
@@ -121,11 +142,23 @@ export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) 
                         <span className="font-mono text-[11px] text-slate-200 truncate">{tbl.name}</span>
                       </div>
 
-                      {npiColsCount > 0 && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800" title={`${npiColsCount} NPI columns protected`}>
-                          NPI
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {tbl.isEmpty ? (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-500 font-mono border border-slate-800">
+                            0 rows
+                          </span>
+                        ) : tbl.rowCount !== undefined && tbl.rowCount !== null ? (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800/80 text-slate-300 font-mono">
+                            {tbl.rowCount} rows
+                          </span>
+                        ) : null}
+
+                        {npiColsCount > 0 && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800" title={`${npiColsCount} NPI columns protected`}>
+                            NPI
+                          </span>
+                        )}
+                      </div>
                     </button>
 
                     {isOpen && (
