@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Database, ChevronDown, ChevronRight, ShieldAlert, Key, Table2, Search } from 'lucide-react';
 
-export default function SchemaSidebar({ schema, onSelectTable }) {
+export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) {
   const [openTables, setOpenTables] = useState({ bc_account: true, bc_invoice: true, pc_policy: true });
   const [searchFilter, setSearchFilter] = useState('');
 
@@ -26,16 +26,16 @@ export default function SchemaSidebar({ schema, onSelectTable }) {
 
   const suiteGroups = [];
   if (bcTables.length > 0) {
-    suiteGroups.push({ title: 'BillingCenter', prefix: 'bc_*', list: bcTables, color: 'text-indigo-400' });
+    suiteGroups.push({ id: 'bc', title: 'BillingCenter', prefix: 'bc_*', list: bcTables, color: 'text-indigo-400' });
   }
   if (pcTables.length > 0) {
-    suiteGroups.push({ title: 'PolicyCenter', prefix: 'pc_*', list: pcTables, color: 'text-sky-400' });
+    suiteGroups.push({ id: 'pc', title: 'PolicyCenter', prefix: 'pc_*', list: pcTables, color: 'text-sky-400' });
   }
   if (ccTables.length > 0) {
-    suiteGroups.push({ title: 'ClaimCenter', prefix: 'cc_*', list: ccTables, color: 'text-amber-400' });
+    suiteGroups.push({ id: 'cc', title: 'ClaimCenter', prefix: 'cc_*', list: ccTables, color: 'text-amber-400' });
   }
   if (otherTables.length > 0) {
-    suiteGroups.push({ title: 'Other Tables', prefix: schema?.mode === 'imported' ? 'twia' : 'public', list: otherTables, color: 'text-emerald-400' });
+    suiteGroups.push({ id: 'other', title: 'Other Tables', prefix: schema?.mode === 'imported' ? 'twia' : 'public', list: otherTables, color: 'text-emerald-400' });
   }
 
   return (
@@ -73,12 +73,19 @@ export default function SchemaSidebar({ schema, onSelectTable }) {
       </div>
 
       <div className="space-y-3 text-xs">
-        {suiteGroups.map((group, gIdx) => (
-          <div key={gIdx} className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
-              <span className={group.color}>{group.title}</span>
-              <span className="text-slate-600 font-mono">{group.prefix}</span>
-            </div>
+        {suiteGroups.map((group, gIdx) => {
+          const isSelected = selectedSuite && group.id === selectedSuite;
+          return (
+            <div key={gIdx} className={`space-y-1.5 p-1.5 rounded-xl transition ${isSelected ? 'bg-slate-800/60 ring-1 ring-emerald-500/40' : ''}`}>
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <span className={group.color}>{group.title}</span>
+                  {isSelected && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-medium">Selected</span>
+                  )}
+                </div>
+                <span className="text-slate-600 font-mono">{group.prefix}</span>
+              </div>
 
             <div className="space-y-1">
               {group.list.map(tbl => {
@@ -138,7 +145,8 @@ export default function SchemaSidebar({ schema, onSelectTable }) {
               })}
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     </aside>
   );

@@ -32,7 +32,7 @@ router.get('/schema', async (req, res) => {
 
 // 3. Conversational Text-to-SQL Chat endpoint
 router.post('/chat', async (req, res) => {
-  const { prompt, sessionId } = req.body;
+  const { prompt, sessionId, suite } = req.body;
 
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ success: false, error: 'A valid text prompt is required.' });
@@ -41,8 +41,8 @@ router.post('/chat', async (req, res) => {
   try {
     const schema = await db.getSchema();
     
-    // Generate SQL with Anti-Hallucination rules
-    const aiResult = await ollama.generateSql(prompt, schema);
+    // Generate SQL with Anti-Hallucination rules targeted to the selected Guidewire application suite
+    const aiResult = await ollama.generateSql(prompt, schema, suite);
 
     // If information is insufficient or missing, return early without execution
     if (aiResult.insufficientInfo || !aiResult.sql) {

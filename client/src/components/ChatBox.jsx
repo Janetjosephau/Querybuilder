@@ -1,11 +1,25 @@
 import React, { useState } from 'react';
 import { Send, Sparkles, Loader2, ShieldCheck, AlertTriangle, RotateCcw } from 'lucide-react';
 
-export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, insufficientInfo, onRetry, lastPrompt }) {
+export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, insufficientInfo, onRetry, lastPrompt, selectedSuite }) {
   const [input, setInput] = useState('');
+
+  const placeholders = {
+    pc: "Ask a PolicyCenter question (e.g. 'Show active in-force policies for Residential product line', 'Calculate total written premium by status')...\n\nTip: Press Enter ↵ to generate query, or Shift + Enter for a new line.",
+    bc: "Ask a BillingCenter question (e.g. 'Give me policies expired in the last month', 'Show past-due invoices with overdue balance', 'List recent payments received')...\n\nTip: Press Enter ↵ to generate query, or Shift + Enter for a new line.",
+    cc: "Ask a ClaimCenter question (e.g. 'Show open claims with total reserves >= $50,000', 'Claims breakdown by loss cause')...\n\nTip: Press Enter ↵ to generate query, or Shift + Enter for a new line.",
+  };
+
+  const currentPlaceholder = selectedSuite 
+    ? placeholders[selectedSuite] 
+    : "⚠️ First select an application above (PolicyCenter, BillingCenter, or ClaimCenter), then describe your data request here...\n\nTip: Press Enter ↵ to generate query.";
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!selectedSuite) {
+      onSubmit(null, 'NO_SUITE_SELECTED');
+      return;
+    }
     if (!input.trim() || isLoading) return;
     const text = input.trim();
     onSubmit(text);
@@ -23,13 +37,33 @@ export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, ins
     <div className="space-y-3">
       {/* Expanded Prompt Card (Matches Result Window Dimensions) */}
       <form onSubmit={handleSubmit}>
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition">
+        <div className={`rounded-2xl bg-white border shadow-sm overflow-hidden focus-within:ring-2 transition ${
+          !selectedSuite 
+            ? 'border-amber-300 focus-within:border-amber-500 focus-within:ring-amber-500/20' 
+            : 'border-slate-200 focus-within:border-emerald-500 focus-within:ring-emerald-500/20'
+        }`}>
           
           {/* Header Bar */}
           <div className="px-4 py-2.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center flex-wrap gap-2">
               <Sparkles className="w-4 h-4 text-emerald-600" />
               <span className="text-xs font-bold text-emerald-600">Describe your data request</span>
+              {selectedSuite ? (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                  selectedSuite === 'pc' ? 'bg-sky-50 text-sky-700 border-sky-300' :
+                  selectedSuite === 'bc' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' :
+                  'bg-amber-50 text-amber-700 border-amber-300'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    selectedSuite === 'pc' ? 'bg-sky-600' : selectedSuite === 'bc' ? 'bg-indigo-600' : 'bg-amber-600'
+                  }`}></span>
+                  Target: {selectedSuite === 'pc' ? 'PolicyCenter (pc_*)' : selectedSuite === 'bc' ? 'BillingCenter (bc_*)' : 'ClaimCenter (cc_*)'}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                  Step 1: Select Application Above
+                </span>
+              )}
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 Air-Gapped Local AI
@@ -83,7 +117,7 @@ export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, ins
                 }
               }}
               rows={5}
-              placeholder="Ask any question about Guidewire PolicyCenter, BillingCenter, or ClaimCenter in plain English (e.g. 'Show loss ratio by product line comparing Residential and Commercial written premium with incurred losses')...&#10;&#10;Tip: Press Enter ↵ to generate query, or Shift + Enter for a new line."
+              placeholder={currentPlaceholder}
               className="w-full bg-transparent text-sm leading-relaxed text-slate-900 placeholder-slate-400 focus:outline-none resize-y min-h-[110px]"
               disabled={isLoading}
             />
@@ -92,10 +126,16 @@ export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, ins
           {/* Footer Toolbar */}
           <div className="px-4 py-2 bg-slate-50/80 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-600">Target Entities:</span>
-              <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">pc_* PolicyCenter</span>
-              <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">bc_* BillingCenter</span>
-              <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">cc_* ClaimCenter</span>
+              <span className="font-medium text-slate-600">Active Target:</span>
+              <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
+                selectedSuite === 'pc' ? 'bg-sky-100 text-sky-800 border-sky-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}>pc_* PolicyCenter</span>
+              <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
+                selectedSuite === 'bc' ? 'bg-indigo-100 text-indigo-800 border-indigo-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}>bc_* BillingCenter</span>
+              <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
+                selectedSuite === 'cc' ? 'bg-amber-100 text-amber-800 border-amber-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}>cc_* ClaimCenter</span>
             </div>
             <div className="text-[10px] text-slate-500 font-medium">
               {input.length} chars • Enter ↵ to Generate

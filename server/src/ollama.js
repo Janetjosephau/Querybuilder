@@ -95,7 +95,7 @@ function setModel(modelName) {
 /**
  * Rule-based fallback for common Guidewire queries (ensures instant zero-latency responses for POC)
  */
-function getDeterministicGuidewireQuery(prompt, schema = null) {
+function getDeterministicGuidewireQuery(prompt, schema = null, suite = null) {
   const p = prompt.toLowerCase();
 
   // Extract custom limit if specified e.g. "top 10", "first 5", "limit 20"
@@ -117,11 +117,11 @@ function getDeterministicGuidewireQuery(prompt, schema = null) {
   ) && !p.includes('holder') && !p.includes('ssn') && !p.includes('loss ratio') && !p.includes('claim');
 
   if (isPolicyStatusQuery) {
-    const isImported = schema?.mode === 'imported';
+    const isBc = suite === 'bc' || (!suite && schema?.mode === 'imported');
     const isExpired = p.includes('expire') || p.includes('expired') || p.includes('expiration');
     const isCancelled = p.includes('cancel') || p.includes('cancelled') || p.includes('canceled');
 
-    if (isImported) {
+    if (isBc) {
       let whereClause = "pp.cancelstatus = 'Expired' OR pp.policyperexpirdate <= CURRENT_DATE";
       let explanationStatus = 'expired';
       if (isCancelled) {
@@ -724,7 +724,7 @@ GROUP BY p.productcode, p.status;`,
 /**
  * Generate SQL from natural language prompt using Ollama with anti-hallucination verification
  */
-async function generateSql(prompt, schema) {
+async function generateSql(prompt, schema, suite = null) {
   // Step 1 & 2: Anti-Hallucination Gap Analysis
   const sufficiency = checkInformationSufficiency(prompt, schema);
   if (!sufficiency.isSufficient) {
@@ -738,12 +738,12 @@ async function generateSql(prompt, schema) {
   }
 
   // Quick check for deterministic match to guarantee zero-latency accuracy on standard queries
-  const deterministic = getDeterministicGuidewireQuery(prompt, schema);
+  const deterministic = getDeterministicGuidewireQuery(prompt, schema, suite);
   if (deterministic) {
     return deterministic;
   }
 
-  const systemPrompt = buildAntiHallucinationSystemPrompt(schema, prompt);
+  const systemPrompt = buildAntiHallucinationSystemPrompt(schema, prompt, suite);
 
   // Calculate optimal CPU threads: use total logical cores minus 2 for system responsiveness (min 4)
   const totalCores = (os.cpus() && os.cpus().length) || 4;

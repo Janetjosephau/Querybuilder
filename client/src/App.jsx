@@ -24,6 +24,7 @@ export default function App() {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [npiMaskedTotal, setNpiMaskedTotal] = useState(0);
+  const [selectedSuite, setSelectedSuite] = useState(null); // 'pc' | 'bc' | 'cc'
 
   // Initial load
   useEffect(() => {
@@ -73,7 +74,12 @@ export default function App() {
     }
   };
 
-  const handleNaturalLanguageQuery = async (promptText) => {
+  const handleNaturalLanguageQuery = async (promptText, errorFlag) => {
+    if (errorFlag === 'NO_SUITE_SELECTED' || !selectedSuite) {
+      setError('Please select an application first (PolicyCenter, BillingCenter, or ClaimCenter) to target your query.');
+      return;
+    }
+
     setIsLoading(true);
     setCurrentPrompt(promptText);
     setLastExecutedPrompt(promptText);
@@ -84,7 +90,7 @@ export default function App() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptText })
+        body: JSON.stringify({ prompt: promptText, suite: selectedSuite })
       });
 
       const data = await res.json();
@@ -196,14 +202,15 @@ export default function App() {
           <SchemaSidebar
             schema={schema}
             onSelectTable={handlePreviewTable}
+            selectedSuite={selectedSuite}
           />
         )}
 
         {/* Content Workspace (Right Side Panel: White Background) */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 bg-white text-slate-800">
           
-          {/* Top Bar with Sidebar Toggle & Refresh */}
-          <div className="flex items-center justify-between pb-1">
+          {/* Top Bar with Sidebar Toggle, 3 App Radio Buttons, & Refresh */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -215,14 +222,82 @@ export default function App() {
               </button>
             </div>
 
-            <button
-              onClick={fetchHealthAndSchema}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-medium transition shadow-sm"
-              title="Refresh Schema & Database Status"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Schema</span>
-            </button>
+            {/* Right group: 3 Radio Buttons for Guidewire Application Suite + Refresh Schema */}
+            <div className="flex items-center flex-wrap gap-2.5">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs shadow-sm transition ${
+                !selectedSuite ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/30' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`text-[11px] font-bold uppercase tracking-wider mr-1 ${
+                  !selectedSuite ? 'text-amber-800' : 'text-slate-500'
+                }`}>
+                  {!selectedSuite ? 'Select Application:' : 'App:'}
+                </span>
+                
+                {/* 1. PolicyCenter */}
+                <label className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer text-xs font-medium transition select-none ${
+                  selectedSuite === 'pc' 
+                    ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-500 font-semibold' 
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/70'
+                }`}>
+                  <input
+                    type="radio"
+                    name="guidewireApplication"
+                    value="pc"
+                    checked={selectedSuite === 'pc'}
+                    onChange={() => { setSelectedSuite('pc'); setError(null); }}
+                    className="accent-sky-600 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>PolicyCenter</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'pc' ? 'bg-sky-700 text-sky-100' : 'bg-slate-200 text-slate-600'}`}>pc_*</span>
+                </label>
+
+                {/* 2. BillingCenter */}
+                <label className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer text-xs font-medium transition select-none ${
+                  selectedSuite === 'bc' 
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500 font-semibold' 
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/70'
+                }`}>
+                  <input
+                    type="radio"
+                    name="guidewireApplication"
+                    value="bc"
+                    checked={selectedSuite === 'bc'}
+                    onChange={() => { setSelectedSuite('bc'); setError(null); }}
+                    className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>BillingCenter</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'bc' ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-600'}`}>bc_*</span>
+                </label>
+
+                {/* 3. ClaimCenter */}
+                <label className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer text-xs font-medium transition select-none ${
+                  selectedSuite === 'cc' 
+                    ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-500 font-semibold' 
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/70'
+                }`}>
+                  <input
+                    type="radio"
+                    name="guidewireApplication"
+                    value="cc"
+                    checked={selectedSuite === 'cc'}
+                    onChange={() => { setSelectedSuite('cc'); setError(null); }}
+                    className="accent-amber-600 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>ClaimCenter</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'cc' ? 'bg-amber-700 text-amber-100' : 'bg-slate-200 text-slate-600'}`}>cc_*</span>
+                </label>
+              </div>
+
+              {/* Refresh Schema Button */}
+              <button
+                onClick={fetchHealthAndSchema}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-medium transition shadow-sm"
+                title="Refresh Schema & Database Status"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh Schema</span>
+              </button>
+            </div>
           </div>
 
           {/* Natural Language Query Box */}
@@ -233,6 +308,7 @@ export default function App() {
             insufficientInfo={insufficientInfo}
             onRetry={handleRetry}
             lastPrompt={lastExecutedPrompt}
+            selectedSuite={selectedSuite}
           />
 
           {/* Generated SQL Preview Card */}

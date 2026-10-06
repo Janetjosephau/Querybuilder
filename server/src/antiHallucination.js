@@ -96,17 +96,26 @@ function verifySqlAgainstCatalog(sql, schema) {
   };
 }
 
-/**
- * Select relevant tables for the prompt when schema has many tables (>35)
- */
-function selectRelevantTables(tables, prompt = '') {
+function selectRelevantTables(tables, prompt = '', suite = null) {
   if (!tables || tables.length <= 12) return tables || [];
 
-  const promptWords = prompt.toLowerCase().split(/[^a-z0-9_]+/).filter(w => w.length > 2);
+  const pLower = (prompt || '').toLowerCase();
+  const suiteLower = (suite || '').toLowerCase();
+  const promptWords = pLower.split(/[^a-z0-9_]+/).filter(w => w.length > 2);
+
   const scored = tables.map(t => {
     let score = 0;
     const tName = t.name.toLowerCase();
     
+    // Explicit suite selection boost (+40) and cross-suite penalty (-30)
+    if (suiteLower === 'bc' && tName.startsWith('bc_')) score += 40;
+    if (suiteLower === 'pc' && tName.startsWith('pc_')) score += 40;
+    if (suiteLower === 'cc' && tName.startsWith('cc_')) score += 40;
+
+    if (suiteLower === 'bc' && (tName.startsWith('pc_') || tName.startsWith('cc_'))) score -= 30;
+    if (suiteLower === 'pc' && (tName.startsWith('bc_') || tName.startsWith('cc_'))) score -= 30;
+    if (suiteLower === 'cc' && (tName.startsWith('bc_') || tName.startsWith('pc_'))) score -= 30;
+
     // Direct table name hit
     if (promptWords.some(w => tName === w || tName.includes(w))) score += 15;
     
@@ -121,7 +130,7 @@ function selectRelevantTables(tables, prompt = '') {
       score += 5;
     }
 
-    // Explicit suite targeting boosts (e.g. "BillingCenter", "in BC", "PolicyCenter", etc.)
+    // Explicit suite targeting boosts from prompt text
     if ((pLower.includes('billing') || pLower.includes('bc_') || pLower.includes('billingcenter')) && tName.startsWith('bc_')) {
       score += 25;
     }
@@ -150,10 +159,15 @@ function selectRelevantTables(tables, prompt = '') {
  * Builds the strict Anti-Hallucination system prompt for local Ollama
  * @param {Object} schema - Clean structural schema (table names, columns, types, foreign keys)
  * @param {string} prompt - User prompt for schema pruning
+ * @param {string} [suite] - Target Guidewire application ('bc' | 'pc' | 'cc')
  * @returns {string} System prompt
  */
-function buildAntiHallucinationSystemPrompt(schema, prompt = '') {
-  const activeTables = selectRelevantTables(schema.tables, prompt);
+function buildAntiHallucinationSystemPrompt(schema, prompt = '', suite = null) {
+  const activeTables = selectRelevantTables(schema.tables, prompt, suite);
+  const suiteNames = { bc: 'BillingCenter (bc_*)', pc: 'PolicyCenter (pc_*)', cc: 'ClaimCenter (cc_*)' };
+  const suiteHeader = suite && suiteNames[suite] 
+    ? `TARGET APPLICATION: Guidewire ${suiteNames[suite]}.\nSTRICT CONSTRAINT: ONLY use tables from ${suiteNames[suite]}. Do NOT use tables from other suites.\n\n`
+    : '';
 
   const schemaDescription = activeTables.map(t => {
     // Keep most relevant columns per table to avoid CPU decoding bottlenecks
@@ -180,7 +194,7 @@ function buildAntiHallucinationSystemPrompt(schema, prompt = '') {
   }).join('\n');
 
   return `ROLE: Expert Guidewire Insurance Text-to-SQL Generator.
-CATALOG:
+${suiteHeader}CATALOG:
 ${schemaDescription}
 
 STRICT RULES:
