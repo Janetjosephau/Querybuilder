@@ -96,6 +96,21 @@ function verifySqlAgainstCatalog(sql, schema) {
   };
 }
 
+function isBcTable(name) {
+  const n = (name || '').toLowerCase();
+  return n.startsWith('bc_') || n.startsWith('bcst_') || n.startsWith('bctl_') || n.startsWith('bcx_') || n.startsWith('bc');
+}
+
+function isPcTable(name) {
+  const n = (name || '').toLowerCase();
+  return n.startsWith('pc_') || n.startsWith('pcst_') || n.startsWith('pctl_') || n.startsWith('pcx_') || n.startsWith('pc');
+}
+
+function isCcTable(name) {
+  const n = (name || '').toLowerCase();
+  return n.startsWith('cc_') || n.startsWith('ccst_') || n.startsWith('cctl_') || n.startsWith('ccx_') || n.startsWith('cc');
+}
+
 function selectRelevantTables(tables, prompt = '', suite = null) {
   if (!tables || tables.length <= 12) return tables || [];
 
@@ -108,13 +123,14 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     const tName = t.name.toLowerCase();
     
     // Explicit suite selection boost (+40) and cross-suite penalty (-30)
-    if (suiteLower === 'bc' && tName.startsWith('bc_')) score += 40;
-    if (suiteLower === 'pc' && tName.startsWith('pc_')) score += 40;
-    if (suiteLower === 'cc' && tName.startsWith('cc_')) score += 40;
+    // Supports all Guidewire conventions: core (bc_), staging (bcst_), typelists (bctl_), extensions (bcx_)
+    if (suiteLower === 'bc' && isBcTable(tName)) score += 40;
+    if (suiteLower === 'pc' && isPcTable(tName)) score += 40;
+    if (suiteLower === 'cc' && isCcTable(tName)) score += 40;
 
-    if (suiteLower === 'bc' && (tName.startsWith('pc_') || tName.startsWith('cc_'))) score -= 30;
-    if (suiteLower === 'pc' && (tName.startsWith('bc_') || tName.startsWith('cc_'))) score -= 30;
-    if (suiteLower === 'cc' && (tName.startsWith('bc_') || tName.startsWith('pc_'))) score -= 30;
+    if (suiteLower === 'bc' && (isPcTable(tName) || isCcTable(tName))) score -= 30;
+    if (suiteLower === 'pc' && (isBcTable(tName) || isCcTable(tName))) score -= 30;
+    if (suiteLower === 'cc' && (isBcTable(tName) || isPcTable(tName))) score -= 30;
 
     // Direct table name hit
     if (promptWords.some(w => tName === w || tName.includes(w))) score += 15;
@@ -131,13 +147,13 @@ function selectRelevantTables(tables, prompt = '', suite = null) {
     }
 
     // Explicit suite targeting boosts from prompt text
-    if ((pLower.includes('billing') || pLower.includes('bc_') || pLower.includes('billingcenter')) && tName.startsWith('bc_')) {
+    if ((pLower.includes('billing') || pLower.includes('bc') || pLower.includes('billingcenter')) && isBcTable(tName)) {
       score += 25;
     }
-    if ((pLower.includes('policycenter') || pLower.includes('pc_')) && tName.startsWith('pc_')) {
+    if ((pLower.includes('policycenter') || pLower.includes('pc')) && isPcTable(tName)) {
       score += 25;
     }
-    if ((pLower.includes('claim') || pLower.includes('cc_') || pLower.includes('claimcenter')) && tName.startsWith('cc_')) {
+    if ((pLower.includes('claim') || pLower.includes('cc') || pLower.includes('claimcenter')) && isCcTable(tName)) {
       score += 25;
     }
 

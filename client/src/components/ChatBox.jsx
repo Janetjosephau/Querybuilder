@@ -129,13 +129,13 @@ export default function ChatBox({ onSubmit, isLoading, reasoningStep, error, ins
               <span className="font-medium text-slate-600">Active Target:</span>
               <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
                 selectedSuite === 'pc' ? 'bg-sky-100 text-sky-800 border-sky-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>pc_* PolicyCenter</span>
+              }`}>pc* PolicyCenter (pc, pcst, pctl, pcx)</span>
               <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
                 selectedSuite === 'bc' ? 'bg-indigo-100 text-indigo-800 border-indigo-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>bc_* BillingCenter</span>
+              }`}>bc* BillingCenter (bc, bcst, bctl, bcx)</span>
               <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition ${
                 selectedSuite === 'cc' ? 'bg-amber-100 text-amber-800 border-amber-400 font-bold shadow-xs' : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>cc_* ClaimCenter</span>
+              }`}>cc* ClaimCenter (cc, ccst, cctl, ccx)</span>
             </div>
             <div className="text-[10px] text-slate-500 font-medium">
               {input.length} chars • Enter ↵ to Generate

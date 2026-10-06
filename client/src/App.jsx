@@ -248,7 +248,7 @@ export default function App() {
                     className="accent-sky-600 w-3.5 h-3.5 cursor-pointer"
                   />
                   <span>PolicyCenter</span>
-                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'pc' ? 'bg-sky-700 text-sky-100' : 'bg-slate-200 text-slate-600'}`}>pc_*</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'pc' ? 'bg-sky-700 text-sky-100' : 'bg-slate-200 text-slate-600'}`} title="pc_*, pcst_*, pctl_*, pcx_*">pc*</span>
                 </label>
 
                 {/* 2. BillingCenter */}
@@ -266,7 +266,7 @@ export default function App() {
                     className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
                   />
                   <span>BillingCenter</span>
-                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'bc' ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-600'}`}>bc_*</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'bc' ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-600'}`} title="bc_*, bcst_*, bctl_*, bcx_*">bc*</span>
                 </label>
 
                 {/* 3. ClaimCenter */}
@@ -284,7 +284,7 @@ export default function App() {
                     className="accent-amber-600 w-3.5 h-3.5 cursor-pointer"
                   />
                   <span>ClaimCenter</span>
-                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'cc' ? 'bg-amber-700 text-amber-100' : 'bg-slate-200 text-slate-600'}`}>cc_*</span>
+                  <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${selectedSuite === 'cc' ? 'bg-amber-700 text-amber-100' : 'bg-slate-200 text-slate-600'}`} title="cc_*, ccst_*, cctl_*, ccx_*">cc*</span>
                 </label>
               </div>
 

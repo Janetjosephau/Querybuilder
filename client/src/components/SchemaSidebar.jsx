@@ -18,21 +18,34 @@ export default function SchemaSidebar({ schema, onSelectTable, selectedSuite }) 
     return tables.filter(t => t.name.toLowerCase().includes(q));
   }, [tables, searchFilter]);
 
-  // Categorize tables by suite prefix
-  const pcTables = filteredTables.filter(t => t.name.startsWith('pc_'));
-  const bcTables = filteredTables.filter(t => t.name.startsWith('bc_'));
-  const ccTables = filteredTables.filter(t => t.name.startsWith('cc_'));
-  const otherTables = filteredTables.filter(t => !t.name.startsWith('pc_') && !t.name.startsWith('bc_') && !t.name.startsWith('cc_'));
+  const isBcTable = (name) => {
+    const n = (name || '').toLowerCase();
+    return n.startsWith('bc_') || n.startsWith('bcst_') || n.startsWith('bctl_') || n.startsWith('bcx_') || n.startsWith('bc');
+  };
+  const isPcTable = (name) => {
+    const n = (name || '').toLowerCase();
+    return n.startsWith('pc_') || n.startsWith('pcst_') || n.startsWith('pctl_') || n.startsWith('pcx_') || n.startsWith('pc');
+  };
+  const isCcTable = (name) => {
+    const n = (name || '').toLowerCase();
+    return n.startsWith('cc_') || n.startsWith('ccst_') || n.startsWith('cctl_') || n.startsWith('ccx_') || n.startsWith('cc');
+  };
+
+  // Categorize tables by suite prefix (supporting core, staging bcst, typelists bctl, extensions bcx)
+  const bcTables = filteredTables.filter(t => isBcTable(t.name));
+  const pcTables = filteredTables.filter(t => isPcTable(t.name));
+  const ccTables = filteredTables.filter(t => isCcTable(t.name));
+  const otherTables = filteredTables.filter(t => !isBcTable(t.name) && !isPcTable(t.name) && !isCcTable(t.name));
 
   const suiteGroups = [];
   if (bcTables.length > 0) {
-    suiteGroups.push({ id: 'bc', title: 'BillingCenter', prefix: 'bc_*', list: bcTables, color: 'text-indigo-400' });
+    suiteGroups.push({ id: 'bc', title: 'BillingCenter', prefix: 'bc*, bcst*, bctl*, bcx*', list: bcTables, color: 'text-indigo-400' });
   }
   if (pcTables.length > 0) {
-    suiteGroups.push({ id: 'pc', title: 'PolicyCenter', prefix: 'pc_*', list: pcTables, color: 'text-sky-400' });
+    suiteGroups.push({ id: 'pc', title: 'PolicyCenter', prefix: 'pc*, pcst*, pctl*, pcx*', list: pcTables, color: 'text-sky-400' });
   }
   if (ccTables.length > 0) {
-    suiteGroups.push({ id: 'cc', title: 'ClaimCenter', prefix: 'cc_*', list: ccTables, color: 'text-amber-400' });
+    suiteGroups.push({ id: 'cc', title: 'ClaimCenter', prefix: 'cc*, ccst*, cctl*, ccx*', list: ccTables, color: 'text-amber-400' });
   }
   if (otherTables.length > 0) {
     suiteGroups.push({ id: 'other', title: 'Other Tables', prefix: schema?.mode === 'imported' ? 'twia' : 'public', list: otherTables, color: 'text-emerald-400' });
