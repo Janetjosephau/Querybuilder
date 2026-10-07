@@ -153,8 +153,12 @@ function generateAllTablesSyntheticData(schema, curatedData = {}) {
 
   for (const table of tables) {
     const tName = table.name.toLowerCase();
-    // If table already has curated data with rows, preserve it
+    // If table already has curated data with rows, merge each row with full schema columns
     if (result[table.name] && result[table.name].length > 0) {
+      result[table.name] = result[table.name].map((curatedRow, idx) => ({
+        ...generateRowForTable(table, idx),
+        ...curatedRow
+      }));
       continue;
     }
 

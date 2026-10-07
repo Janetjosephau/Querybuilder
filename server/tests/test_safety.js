@@ -230,6 +230,19 @@ runTest('Positive: selectRelevantTables ranks bc_history above bc_appeventstest 
   assert.strictEqual(prompt.includes('bc_appeventstest'), false, 'bc_appeventstest must be penalized and omitted');
 });
 
+runTest('Positive: "show all records from bcx_lockboxlineitem" generates SELECT * with all columns (>=33)', async () => {
+  db.switchToImported();
+  const res = ollama.getDeterministicGuidewireQuery('show all records from bcx_lockboxlineitem', { mode: 'imported' });
+  assert.ok(res && res.sql);
+  assert.ok(res.sql.includes('SELECT * FROM bcx_lockboxlineitem_ext'), 'Must be SELECT * on bcx_lockboxlineitem_ext');
+  assert.strictEqual(res.sql.includes('JOIN'), false, 'Must not perform lockbox remittance batch join');
+
+  const execRes = await db.executeQuery(res.sql);
+  assert.ok(execRes.rowCount > 0, 'Must return rows');
+  const columnCount = Object.keys(execRes.rows[0]).length;
+  assert.ok(columnCount >= 33, `Expected at least 33 columns, got ${columnCount}`);
+});
+
 console.log(`\nTEST RESULTS: ${passed}/${total} PASSED`);
 if (passed !== total) {
   process.exit(1);

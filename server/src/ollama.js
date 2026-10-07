@@ -341,10 +341,53 @@ LIMIT ${histLimit};`,
     }
   }
 
+  // 0.28 Direct Table Dump / Select All queries (e.g. "show all records from bcx_lockboxlineitem", "select * from bc_account", "all columns from ...")
+  const isDirectSelectAll = (
+    p.includes('all records') ||
+    p.includes('all columns') ||
+    p.includes('all data') ||
+    p.includes('select *') ||
+    p.includes('every column') ||
+    p.includes('full table') ||
+    p.includes('show table') ||
+    (p.includes('from') && (p.includes('bc_') || p.includes('bcst_') || p.includes('bctl_') || p.includes('bcx_') || p.includes('pc_') || p.includes('cc_') || p.includes('lockboxlineitem')))
+  );
+
+  if (isDirectSelectAll) {
+    // 1. Lockbox line item variations (bcx_lockboxlineitem_ext / bc_lockboxlineitem_ext)
+    if (p.includes('lockboxlineitem') || p.includes('lockbox_lineitem') || p.includes('bcx_lockboxlineitem') || p.includes('bc_lockboxlineitem')) {
+      const targetTable = (schema?.mode === 'imported' || !schema) ? 'bcx_lockboxlineitem_ext' : 'bc_lockboxlineitem_ext';
+      return {
+        sql: `SELECT * FROM ${targetTable} LIMIT ${limit};`,
+        explanation: `Retrieves all records and columns directly from the ${targetTable} table. Protected NPI columns are automatically sanitized.`,
+        confidence: 'high',
+        insufficientInfo: null,
+        suggestedChartType: 'table'
+      };
+    }
+
+    // 2. Generic table matching for any table in schema
+    const tablesList = schema?.tables || [];
+    for (const t of tablesList) {
+      const tName = t.name.toLowerCase();
+      if (p.includes(tName)) {
+        return {
+          sql: `SELECT * FROM ${t.name} LIMIT ${limit};`,
+          explanation: `Retrieves all records and columns directly from the ${t.name} table.`,
+          confidence: 'high',
+          insufficientInfo: null,
+          suggestedChartType: 'table'
+        };
+      }
+    }
+  }
+
   // 0.3 Lockbox & Remittance Batch Process Queries (bcx_lockboxlineitem_ext / bc_lockboxlineitem_ext)
   const isLockboxQuery = (
-    p.includes('lockbox') || p.includes('remittance') || p.includes('lockboxlineitem') ||
-    (p.includes('batch') && (p.includes('payment') || p.includes('remit') || p.includes('money') || p.includes('received')))
+    !isDirectSelectAll && (
+      p.includes('lockbox') || p.includes('remittance') || p.includes('lockboxlineitem') ||
+      (p.includes('batch') && (p.includes('payment') || p.includes('remit') || p.includes('money') || p.includes('received')))
+    )
   );
 
   if (isLockboxQuery) {
@@ -417,7 +460,7 @@ LIMIT ${histLimit};`,
     { table: 'bc_producer', triggers: ['bc_producer', 'bc producer', 'producer', 'producers', 'agency', 'broker'] },
     { table: 'bc_accountpaymentplan', triggers: ['bc_accountpaymentplan', 'account payment plan', 'payment plan', 'payment plans'] },
     { table: 'bc_charge', triggers: ['bc_charge', 'bc charge', 'charge', 'charges'] },
-    { table: 'bcx_lockboxlineitem_ext', triggers: ['bcx_lockboxlineitem_ext', 'bc_lockboxlineitem_ext', 'lockboxlineitem_ext', 'lockbox table'] },
+    { table: 'bcx_lockboxlineitem_ext', triggers: ['bcx_lockboxlineitem_ext', 'bc_lockboxlineitem_ext', 'lockboxlineitem_ext', 'bcx_lockboxlineitem', 'bc_lockboxlineitem', 'lockboxlineitem', 'lockbox table'] },
     { table: 'bc_history', triggers: ['bc_history', 'history table', 'history events', 'audit history', 'history event', 'history'] },
     { table: 'pc_policyperiod', triggers: ['pc_policyperiod', 'policyperiod', 'policy period'] },
     { table: 'pc_policy', triggers: ['pc_policy', 'pc policy', 'policies', 'policy'] },
